@@ -47,27 +47,6 @@
 #include <mach-o/loader.h>
 #include <libkern/libkern.h>
 
-/* Function prototypes */
-int our_getxattr(struct proc *, struct getxattr_args *, int *);
-int our_fgetxattr(struct proc *, struct fgetxattr_args *, int *);
-int our_setxattr(struct proc *, struct setxattr_args *, int *);
-int our_fsetxattr(struct proc *, struct fsetxattr_args *, int *);
-int our_removexattr(struct proc *, struct removexattr_args *, int *l);
-int our_fremovexattr(struct proc *, struct fremovexattr_args *, int *);
-int our_listxattr(struct proc *, struct listxattr_args *, int *);
-int our_flistxattr(struct proc *, struct flistxattr_args *, int *);
-int our_gethostuuid (struct proc *, struct gethostuuid_args *, int *);
-
-typedef int getxattr_func_t (struct proc *, struct getxattr_args *, int *);
-typedef int fgetxattr_func_t (struct proc *, struct fgetxattr_args *, int *);
-typedef int setxattr_func_t (struct proc *, struct setxattr_args *, int *);
-typedef int fsetxattr_func_t (struct proc *, struct fsetxattr_args *, int *);
-typedef int removexattr_func_t (struct proc *, struct removexattr_args *, int *);
-typedef int fremovexattr_func_t (struct proc *, struct fremovexattr_args *, int *);
-typedef int listxattr_func_t (struct proc *, struct listxattr_args *, int *);
-typedef int flistxattr_func_t (struct proc *, struct flistxattr_args *, int *);
-typedef int gethostuuid_func_t (struct proc *, struct gethostuuid_args *, int *);
-
 kern_return_t find_sysent(void);
 kern_return_t cleanup_sysent(void);
 mach_vm_address_t calculate_int80address(const mach_vm_address_t idt_address);

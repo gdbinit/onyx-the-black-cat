@@ -59,17 +59,6 @@ struct descriptor_idt
 extern int (*real_ptrace)(struct proc *, struct ptrace_args *, int *);
 extern int (*real_sysctl)(struct proc *, struct __sysctl_args *, int *);
 
-// reserve space to store the original functions
-getxattr_func_t *real_getxattr;
-fgetxattr_func_t *real_fgetxattr;
-setxattr_func_t *real_setxattr;
-fsetxattr_func_t *real_fsetxattr;
-removexattr_func_t *real_removexattr;
-fremovexattr_func_t *real_fremovexattr;
-listxattr_func_t *real_listxattr;
-flistxattr_func_t *real_flistxattr;
-gethostuuid_func_t *real_gethostuuid;
-
 // local functions
 static uint8_t process_header(const mach_vm_address_t target_address, uint64_t *data_address, uint64_t *data_size);
 static void* bruteforce_sysent(void);
