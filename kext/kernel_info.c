@@ -100,7 +100,7 @@ init_kernel_info(struct kernel_info *kinfo)
     // compute kaslr slide
     get_running_text_address(kinfo);
     kinfo->kaslr_slide = kinfo->running_text_addr - kinfo->disk_text_addr;
-    LOG_MSG("[DEBUG] kernel aslr slide is %llx\n", kinfo->kaslr_slide);
+    LOG_DEBUG("[DEBUG] kernel aslr slide is %llx\n", kinfo->kaslr_slide);
     // we know the location of linkedit and offsets into symbols and their strings
     // now we need to read linkedit into a buffer so we can process it later
     // __LINKEDIT total size is around 1MB
@@ -169,7 +169,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             // find if symbol matches
             if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
             {
-                LOG_MSG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%x)\n", symbol_to_solve, nlist->n_value + kinfo->kaslr_slide, nlist->n_value);
+                LOG_DEBUG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%x)\n", symbol_to_solve, nlist->n_value + kinfo->kaslr_slide, nlist->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
                 return (nlist->n_value + kinfo->kaslr_slide);
             }
@@ -187,7 +187,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             // find if symbol matches
             if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
             {
-                LOG_MSG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%llx)\n", symbol_to_solve, nlist64->n_value + kinfo->kaslr_slide, nlist64->n_value);
+                LOG_DEBUG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%llx)\n", symbol_to_solve, nlist64->n_value + kinfo->kaslr_slide, nlist64->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
                 return (nlist64->n_value + kinfo->kaslr_slide);
             }
@@ -221,7 +221,7 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
             // lookup the next symbol
             nlist = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + (i+1) * sizeof(struct nlist_64));
             symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist->n_un.n_strx);
-            LOG_MSG("[DEBUG] found next symbol %s at %llx (%s)\n", symbol, nlist->n_value, symbol_string);
+            LOG_DEBUG("[DEBUG] found next symbol %s at %llx (%s)\n", symbol, nlist->n_value, symbol_string);
             return (nlist->n_value + kinfo->kaslr_slide);
         }
     }
@@ -266,13 +266,13 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
     uint32_t magic = *(uint32_t*)buffer;
     if (magic == FAT_CIGAM)
     {
-        LOG_MSG("[DEBUG] Target is fat %d!\n", (int)sizeof(void*));
+        LOG_DEBUG("[DEBUG] Target is fat %d!\n", (int)sizeof(void*));
         struct fat_header *fh = (struct fat_header*)buffer;
         struct fat_arch *fa = (struct fat_arch*)(buffer + sizeof(struct fat_header));
         uint32_t file_offset = 0;
         for (uint32_t i = 0; i < ntohl(fh->nfat_arch); i++)
         {
-            LOG_MSG("[DEBUG] process arch %d\n", ntohl(fa->cputype));
+            LOG_DEBUG("[DEBUG] process arch %d\n", ntohl(fa->cputype));
             if (sizeof(void*) == 8 && ntohl(fa->cputype) == CPU_TYPE_X86_64)
             {
                 file_offset = ntohl(fa->offset);
@@ -280,7 +280,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
             }
             else if (sizeof(void*) == 4 && ntohl(fa->cputype) == CPU_TYPE_X86)
             {
-                LOG_MSG("[DEBUG] reading 32bits kernel\n");
+                LOG_DEBUG("[DEBUG] reading 32bits kernel\n");
                 file_offset = ntohl(fa->offset);
                 break;
             }

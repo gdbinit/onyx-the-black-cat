@@ -53,6 +53,7 @@
 #include "my_data_definitions.h"
 #include "sysent.h"
 #include "patchkernel.h"
+#include "antidebug.h"
 
 // local prototypes
 static int ctl_connect(kern_ctl_ref ctl_ref, struct sockaddr_ctl *sac, void **unitinfo);
@@ -95,7 +96,7 @@ install_kern_control(void)
     if (error == 0)
     {
         g_kern_ctl_registered = TRUE;
-        LOG_MSG("[INFO] Onyx kernel control installed successfully!\n");
+        LOG_DEBUG("[DEBUG] Onyx kernel control installed successfully!\n");
         return KERN_SUCCESS;
     }
     else
@@ -164,7 +165,7 @@ ctl_connect(kern_ctl_ref ctl_ref, struct sockaddr_ctl *sac, void **unitinfo)
     // we will need these to queue data to userland
     g_client_unit = sac->sc_unit;
     g_client_ctl_ref = ctl_ref;
-    LOG_MSG("[INFO] Client connected!\n");
+    LOG_DEBUG("[DEBUG] Client connected!\n");
     return 0;
 }
 
