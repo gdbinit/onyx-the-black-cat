@@ -73,29 +73,25 @@ patch_resume_flag(int cmd)
     // patch bytes
     if (cmd == ENABLE)
     {
-        disable_interrupts();
-        disable_wp();
+        enable_kernel_write();
         struct patch_location *tmp = NULL;
         LL_FOREACH(patch_locations, tmp)
         {
             int offset = tmp->size - 4;
             *(uint32_t*)(tmp->address + offset) = 0xFFFF8DFF;
         }
-        enable_wp();
-        enable_interrupts();
+        disable_kernel_write();
     }
     // restore original bytes
     else if (cmd == DISABLE)
     {
-        disable_interrupts();
-        disable_wp();
+        enable_kernel_write();
         struct patch_location *tmp = NULL;
         LL_FOREACH(patch_locations, tmp)
         {
             memcpy(tmp->address, tmp->orig_bytes, tmp->size);
         }
-        enable_wp();
-        enable_interrupts();
+        disable_kernel_write();
     }
     return KERN_SUCCESS;
 }
@@ -130,8 +126,7 @@ patch_task_for_pid(int cmd)
     
     if (cmd == ENABLE)
     {
-        disable_interrupts();
-        disable_wp();
+        enable_kernel_write();
         // XXX: somewhat fragile assumptions going on here ;-) Beware!
         // if it's a JZ we NOP everything
         if (patch.jmp == 0)
@@ -144,16 +139,13 @@ patch_task_for_pid(int cmd)
             // XXX: let's trust our luck and assume it's a short jump
             memset(patch.address, 0xEB, 1);
         }
-        enable_wp();
-        enable_interrupts();
+        disable_kernel_write();
     }
     else if (cmd == DISABLE)
     {
-        disable_interrupts();
-        disable_wp();
+        enable_kernel_write();
         memcpy(patch.address, patch.orig_bytes, patch.size);
-        enable_wp();
-        enable_interrupts();
+        disable_kernel_write();
     }
     return KERN_SUCCESS;
 }

@@ -90,3 +90,17 @@ verify_wp(void)
     if (cr0 & CR0_WP) return 0;
     else return 1;
 }
+
+void
+enable_kernel_write(void)
+{
+    disable_interrupts();
+    disable_wp();
+}
+
+void
+disable_kernel_write(void)
+{
+    enable_wp();
+    enable_interrupts();
+}

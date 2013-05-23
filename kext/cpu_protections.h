@@ -48,5 +48,7 @@
 kern_return_t disable_wp(void);
 kern_return_t enable_wp(void);
 uint8_t verify_wp(void);
+void enable_kernel_write(void);
+void disable_kernel_write(void);
 
 #endif

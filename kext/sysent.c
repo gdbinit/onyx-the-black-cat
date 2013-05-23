@@ -90,7 +90,7 @@ find_sysent(void)
 kern_return_t
 cleanup_sysent(void)
 {
-    disable_wp();
+    enable_kernel_write();
     if (real_ptrace != NULL && g_sysent[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
     {
         g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
@@ -99,7 +99,7 @@ cleanup_sysent(void)
     {
         g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
     }
-    enable_wp();
+    disable_kernel_write();
     return KERN_SUCCESS;
 }
 

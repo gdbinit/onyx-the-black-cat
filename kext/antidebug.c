@@ -71,7 +71,7 @@ anti_ptrace(int cmd)
 {
     LOG_DEBUG("[DEBUG] Executing anti_ptrace!\n");
     // Mountain Lion moved sysent[] to read-only section :-)
-    disable_wp();
+    enable_kernel_write();
     if (cmd == DISABLE)
     {
         // restore the pointer to the original function
@@ -87,14 +87,14 @@ anti_ptrace(int cmd)
         // hook the syscall by replacing the pointer in sysent
         g_sysent[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
     }
-    enable_wp();
+    disable_kernel_write();
     return KERN_SUCCESS;
 }
 
 kern_return_t
 anti_sysctl(int cmd)
 {
-    disable_wp();
+    enable_kernel_write();
     if (cmd == DISABLE)
     {
         if (real_sysctl != NULL)
@@ -107,7 +107,7 @@ anti_sysctl(int cmd)
         real_sysctl = (void*)g_sysent[SYS___sysctl].sy_call;
         g_sysent[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
     }
-    enable_wp();
+    disable_kernel_write();
     return KERN_SUCCESS;
 }
 
