@@ -45,7 +45,6 @@ void
 get_addr_idt(mach_vm_address_t *idt)
 {
 	uint8_t idtr[10];
-//	mach_vm_address_t *idt;
 	__asm__ volatile ("sidt %0": "=m" (idtr));
 #if __LP64__
 	*idt = *(mach_vm_address_t *)(idtr+2);
