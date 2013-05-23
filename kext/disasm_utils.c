@@ -58,7 +58,7 @@
 extern struct kernel_info g_kernel_info;
 
 // local functions prototypes
-static kern_return_t disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations);
+static kern_return_t disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations);
 
 /*
  * find the locations where we need to patch the resume flag
@@ -73,7 +73,7 @@ static kern_return_t disasm_jumps(mach_vm_address_t start, struct rf_location **
  * 
  */
 kern_return_t
-find_resume_flag(mach_vm_address_t start, struct rf_location **patch_locations)
+find_resume_flag(mach_vm_address_t start, struct patch_location **patch_locations)
 {
     // allocate space for disassembly output
     _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
@@ -122,7 +122,7 @@ find_resume_flag(mach_vm_address_t start, struct rf_location **patch_locations)
                 decodedInstructions[i].imm.dword == RF_FLAG_32BITS)
             {
                 LOG_DEBUG("[DEBUG] Found AND at %llx %x\n", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
-                struct rf_location *new = _MALLOC(sizeof(struct rf_location), M_TEMP, M_WAITOK);
+                struct patch_location *new = _MALLOC(sizeof(struct patch_location), M_TEMP, M_WAITOK);
                 new->address = decodedInstructions[i].addr;
                 new->size = decodedInstructions[i].size;
                 memcpy(new->orig_bytes, new->address, new->size);
@@ -132,7 +132,7 @@ find_resume_flag(mach_vm_address_t start, struct rf_location **patch_locations)
                      decodedInstructions[i].ops[1].type == O_IMM &&
                      decodedInstructions[i].imm.qword == RF_FLAG_64BITS)
             {
-                struct rf_location *new = _MALLOC(sizeof(struct rf_location), M_TEMP, M_WAITOK);
+                struct patch_location *new = _MALLOC(sizeof(struct patch_location), M_TEMP, M_WAITOK);
                 new->address = decodedInstructions[i].addr;
                 new->size = decodedInstructions[i].size;
                 memcpy(new->orig_bytes, new->address, new->size);
@@ -171,7 +171,7 @@ find_resume_flag(mach_vm_address_t start, struct rf_location **patch_locations)
     }
     
 #if DEBUG
-    struct rf_location *tmp = NULL;
+    struct patch_location *tmp = NULL;
     LL_FOREACH(*patch_locations, tmp)
     {
         LOG_DEBUG("patch location: %llx\n", tmp->address);
@@ -192,10 +192,116 @@ failure:
 }
 
 /*
+ * function to lookup address where we need to patch task_for_pid()
+ * so we can restore ability to get kernel task port from userland
+ */
+kern_return_t
+find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_location *topatch)
+{
+    kern_return_t ret = KERN_FAILURE;
+    // allocate space for disassembly output
+    _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
+    if (decodedInstructions == NULL)
+    {
+        LOG_MSG("[ERROR] Decoded instructions allocation failed!\n");
+        return ret;
+    }
+    
+	_DecodeResult res = 0;
+    _CodeInfo ci = {0} ;
+#if __LP64__
+    ci.dt = Decode64Bits;
+#else
+    ci.dt = Decode32Bits;
+#endif
+    ci.features = DF_NONE;
+    ci.codeLen = 4096;
+    ci.code = (unsigned char*)start;
+    ci.codeOffset = start;
+    mach_vm_address_t next;
+    uint32_t decodedInstructionsCount = 0;
+
+    // first pass - find the flags being used inside machine_thread_set_state()
+    while (1)
+    {
+        res = distorm_decompose(&ci, decodedInstructions, MAX_INSTRUCTIONS, &decodedInstructionsCount);
+        if (res == DECRES_INPUTERR)
+        {
+            // Error handling...
+            LOG_MSG("[ERROR] Distorm failed to disassemble!\n");
+            goto end;
+        }
+        
+        // XXX: this is ugly but does the job :X
+        for (int i = 0; i < decodedInstructionsCount; i++)
+        {
+            // find call to audit_arg_mach_port1()
+            if (decodedInstructions[i].opcode == I_CALL &&
+                decodedInstructions[i].ops[0].type == O_PC)
+            {
+                mach_vm_address_t rip_address = INSTRUCTION_GET_TARGET(&decodedInstructions[i]);
+                // found location of call to audit_arg_mach_port1()
+                if (rip_address == symbol_addr)
+                {
+                    LOG_DEBUG("DEBUG] Found call to audit_arg_mach_port1\n");
+                    // try to find the test and conditional jump in the next instructions
+                    for (int x = i; x < i + 10; x++)
+                    {
+                        if (decodedInstructions[x].opcode == I_TEST)
+                        {
+                            LOG_DEBUG("[DEBUG] Found test at %p\n", (void*)decodedInstructions[x].addr);
+                            for (int z = x; z < x + 10; z++)
+                            {
+                                if (decodedInstructions[z].opcode == I_JZ)
+                                {
+                                    LOG_DEBUG("[DEBUG] Found conditional jump at %p\n", (void*)decodedInstructions[z].addr);
+                                    topatch->address = decodedInstructions[z].addr;
+                                    topatch->size = decodedInstructions[z].size;
+                                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
+                                    topatch->jmp = 0;
+                                    ret = KERN_SUCCESS;
+                                    goto end;
+                                }
+                                else if (decodedInstructions[z].opcode == I_JNZ)
+                                {
+                                    LOG_DEBUG("[DEBUG] Found conditional jump at %p\n", (void*)decodedInstructions[z].addr);
+                                    topatch->address = decodedInstructions[z].addr;
+                                    topatch->size = decodedInstructions[z].size;
+                                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
+                                    topatch->jmp = 1;
+                                    ret = KERN_SUCCESS;
+                                    goto end;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (res == DECRES_SUCCESS) break; // All instructions were decoded.
+        else if (decodedInstructionsCount == 0) break;
+        // sync the disassembly
+        // the total number of bytes disassembly to previous last instruction
+        next = decodedInstructions[decodedInstructionsCount-1].addr  - ci.codeOffset;
+        // add points to the first byte so add instruction size to it
+        next += decodedInstructions[decodedInstructionsCount-1].size;
+        // update the CodeInfo struct with the synced data
+        ci.code += next;
+        ci.codeOffset += next;
+        ci.codeLen -= next;
+    }
+    
+end:
+    _FREE(decodedInstructions, M_TEMP);
+    return ret;
+}
+
+/*
  * auxiliary function to disassemble the jumps from resume flag
  */
 static kern_return_t
-disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations)
+disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations)
 {
     LOG_DEBUG("[DEBUG] Executing %s starting at address %llx\n", __FUNCTION__, start);
     // allocate space for disassembly output
@@ -238,7 +344,7 @@ disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations)
             {
                 LOG_DEBUG("[DEBUG] Found AND at %llx %x\n", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
                 // test if value already exists on the list
-                struct rf_location *tmp = NULL;
+                struct patch_location *tmp = NULL;
                 int exists = 0;
                 LL_FOREACH(*patch_locations, tmp)
                 {
@@ -249,7 +355,7 @@ disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations)
                 }
                 if (!exists)
                 {
-                    struct rf_location *new = _MALLOC(sizeof(struct rf_location), M_TEMP, M_WAITOK);
+                    struct patch_location *new = _MALLOC(sizeof(struct patch_location), M_TEMP, M_WAITOK);
                     new->address = decodedInstructions[i].addr;
                     new->size = decodedInstructions[i].size;
                     memcpy(new->orig_bytes, new->address, new->size);
@@ -260,7 +366,7 @@ disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations)
                      decodedInstructions[i].ops[1].type == O_IMM &&
                      decodedInstructions[i].imm.qword == RF_FLAG_64BITS)
             {
-                struct rf_location *tmp = NULL;
+                struct patch_location *tmp = NULL;
                 int exists = 0;
                 LL_FOREACH(*patch_locations, tmp)
                 {
@@ -271,7 +377,7 @@ disasm_jumps(mach_vm_address_t start, struct rf_location **patch_locations)
                 }
                 if (!exists)
                 {
-                    struct rf_location *new = _MALLOC(sizeof(struct rf_location), M_TEMP, M_WAITOK);
+                    struct patch_location *new = _MALLOC(sizeof(struct patch_location), M_TEMP, M_WAITOK);
                     new->address = decodedInstructions[i].addr;
                     new->size = decodedInstructions[i].size;
                     memcpy(new->orig_bytes, new->address, new->size);

@@ -60,7 +60,7 @@ extern struct kernel_info g_kernel_info;
 kern_return_t
 patch_resume_flag(int cmd)
 {
-    static struct rf_location *patch_locations = NULL;
+    static struct patch_location *patch_locations = NULL;
     // get the locations we need to patch
     if (patch_locations == NULL)
     {
@@ -73,9 +73,9 @@ patch_resume_flag(int cmd)
     // patch bytes
     if (cmd == ENABLE)
     {
-        disable_wp();
         disable_interrupts();
-        struct rf_location *tmp = NULL;
+        disable_wp();
+        struct patch_location *tmp = NULL;
         LL_FOREACH(patch_locations, tmp)
         {
             int offset = tmp->size - 4;
@@ -87,9 +87,9 @@ patch_resume_flag(int cmd)
     // restore original bytes
     else if (cmd == DISABLE)
     {
-        disable_wp();
         disable_interrupts();
-        struct rf_location *tmp = NULL;
+        disable_wp();
+        struct patch_location *tmp = NULL;
         LL_FOREACH(patch_locations, tmp)
         {
             memcpy(tmp->address, tmp->orig_bytes, tmp->size);
@@ -107,6 +107,54 @@ patch_resume_flag(int cmd)
 kern_return_t
 patch_task_for_pid(int cmd)
 {
+    static struct patch_location patch = {0};
+    
+    if (patch.address == 0)
+    {
+        mach_vm_address_t task_for_pid_sym = solve_kernel_symbol(&g_kernel_info, "_task_for_pid");
+        mach_vm_address_t audit_arg_mach_port1_sym = solve_kernel_symbol(&g_kernel_info, "_audit_arg_mach_port1");
+        if (task_for_pid_sym && audit_arg_mach_port1_sym)
+        {
+            if  (find_task_for_pid(task_for_pid_sym, audit_arg_mach_port1_sym, &patch))
+            {
+                LOG_MSG("[ERROR] Can't find location to patch task_for_pid()!\n");
+                return KERN_FAILURE;
+            }
+        }
+        else
+        {
+            LOG_MSG("[ERROR] Can't solve required symbols to patch task_for_pid()\n");
+            return KERN_FAILURE;
+        }
+    }
+    
+    if (cmd == ENABLE)
+    {
+        disable_interrupts();
+        disable_wp();
+        // XXX: somewhat fragile assumptions going on here ;-) Beware!
+        // if it's a JZ we NOP everything
+        if (patch.jmp == 0)
+        {
+            memset(patch.address, 0x90, patch.size);
+        }
+        // if it's a JNZ we convert into a JMP
+        else if (patch.jmp == 1)
+        {
+            // XXX: let's trust our luck and assume it's a short jump
+            memset(patch.address, 0xEB, 1);
+        }
+        enable_wp();
+        enable_interrupts();
+    }
+    else if (cmd == DISABLE)
+    {
+        disable_interrupts();
+        disable_wp();
+        memcpy(patch.address, patch.orig_bytes, patch.size);
+        enable_wp();
+        enable_interrupts();
+    }
     return KERN_SUCCESS;
 }
 

@@ -61,12 +61,13 @@ struct kernel_info
     uint32_t fat_offset;                 // the file offset inside the fat archive for the active arch
 };
 
-struct rf_location
+struct patch_location
 {
     mach_vm_address_t address;
     int size;
     char orig_bytes[15];
-    struct rf_location *next;
+    int jmp;                        // 0 = jz, 1 = jnz
+    struct patch_location *next;
 };
 
 // sysent definitions
