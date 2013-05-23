@@ -56,7 +56,6 @@
 #define ISSET(t, f)     ((t) & (f))
 
 // external variables
-extern char k_ptraceprocess[512];
 extern struct sysent *g_sysent;
 
 // prototypes
@@ -166,24 +165,8 @@ int
 onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
 {
 	char processname[MAXCOMLEN+1];
-    // verify if it's a PT_DENY_ATTACH request and we are looking for specific process
-    if (uap->req == PT_DENY_ATTACH && strcmp(k_ptraceprocess,"0") != 0)
-    {
-        // grab name of the process
-        proc_name(p->p_pid, processname, sizeof(processname));
-        // does it match the configured process name?
-        if (strcmp(processname, k_ptraceprocess) == 0)
-        {
-            LOG_MSG("[INFO] Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)\n", p->p_pid, processname);
-            return 0;
-        }
-        else
-        {
-            return real_ptrace(p, uap, retval);
-        }
-    }
     // verify if it's a PT_DENY_ATTACH request and fix for all processes that call it
-    else if (uap->req == PT_DENY_ATTACH)
+    if (uap->req == PT_DENY_ATTACH)
     {
         proc_name(p->p_pid, processname, sizeof(processname));
         LOG_MSG("[INFO] Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)\n", p->p_pid, processname);
