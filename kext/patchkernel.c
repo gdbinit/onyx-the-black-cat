@@ -42,6 +42,10 @@
 #include <sys/types.h>
 #include <string.h>
 #include <libkern/libkern.h>
+#include <i386/cpuid.h>
+#include <i386/proc_reg.h>
+#include <i386/locks.h>
+
 #include "my_data_definitions.h"
 #include "disasm_utils.h"
 #include "kernel_info.h"
@@ -113,5 +117,54 @@ patch_task_for_pid(int cmd)
 kern_return_t
 patch_kauth(int cmd)
 {
+    return KERN_SUCCESS;
+}
+
+/*
+ * Modify MSR value
+ * We modify MSR to activate single-step-on-branches.
+ * This requires ring 0 privileges.
+ */
+kern_return_t
+patch_singlestep(int cmd)
+{
+    u_int64_t msr;
+    int i, k, mask;
+    // read current debug MSR
+    msr = rdmsr64(MSR_IA32_DEBUGCTLMSR);
+    LOG_DEBUG("[DEBUG] Old MSR bits: ");
+    for (i = 7; i>=0; i--)
+    {
+        mask = 1 << i;
+        k = msr & mask;
+        if (k == 0)
+        {
+            printf("%d:0 ",i);
+        }
+        else
+        {
+            printf("%d:1 ",i);
+        }
+    }
+    printf("\n");
+    // enable only that bit 1
+    wrmsr64(MSR_IA32_DEBUGCTLMSR,0x2);
+    // verify our operation
+    msr = rdmsr64(MSR_IA32_DEBUGCTLMSR);
+    LOG_DEBUG("[DEBUG] New MSR bits: ");
+    for (i = 7; i>=0; i--)
+    {
+        mask = 1 << i;
+        k = msr & mask;
+        if (k == 0)
+        {
+            printf("%d:0 ",i);
+        }
+        else
+        {
+            printf("%d:1 ",i);
+        }
+    }
+    printf("\n");
     return KERN_SUCCESS;
 }
