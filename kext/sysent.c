@@ -203,8 +203,9 @@ bruteforce_sysent(void)
     // bruteforce search for sysent in __DATA segment
     while (data_address <= data_limit)
     {
-        struct sysent *table = (struct sysent*)(data_address);
-        if(table[SYS_exit].sy_narg      == 1 &&
+        struct sysent *table = (struct sysent*)data_address;
+        if((void*)table != NULL &&
+           table[SYS_exit].sy_narg      == 1 &&
            table[SYS_fork].sy_narg      == 0 &&
            table[SYS_read].sy_narg      == 3 &&
            table[SYS_wait4].sy_narg     == 4 &&
