@@ -281,6 +281,16 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
             patch_resume_flag(DISABLE);
             break;
         }
+        case PATCH_SINGLESTEP:
+        {
+            patch_singlestep(ENABLE);
+            break;
+        }
+        case UNPATCH_SINGLESTEP:
+        {
+            patch_singlestep(DISABLE);
+            break;
+        }
         default:
             error = ENOTSUP;
             break;

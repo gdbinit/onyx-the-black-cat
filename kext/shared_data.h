@@ -55,5 +55,7 @@
 #define ANTI_KAUTH_OFF         0x7
 #define PATCH_RESUME_FLAG      0x8
 #define UNPATCH_RESUME_FLAG    0x9
+#define PATCH_SINGLESTEP       0xa
+#define UNPATCH_SINGLESTEP     0xb
 
 #endif
