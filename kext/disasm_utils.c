@@ -71,6 +71,25 @@ static kern_return_t disasm_jumps(mach_vm_address_t start, struct patch_location
  * this implementation is ugly because in some versions there is recursion - the static functions are next
  * to machine_thread_set_state() and its fixed disassembly size runs into them
  * 
+ * code that needs to be patched:
+ * @ xnu/osfmk/i386/pcb.c
+ kern_return_t
+ machine_thread_set_state(
+ thread_t thr_act,
+ thread_flavor_t flavor,
+ thread_state_t tstate,
+ mach_msg_type_number_t count)
+ {
+ (...)
+ saved_state->efl = (state->efl & ~EFL_USER_CLEAR) | EFL_USER_SET;
+ (...)
+ saved_state->isf.rflags = (state->isf.rflags & ~EFL_USER_CLEAR) | EFL_USER_SET;
+ (...)
+ }
+ 
+ and the same inside inside set_thread_state32() and set_thread_state64():
+ saved_state->efl = (ts->eflags & ~EFL_USER_CLEAR) | EFL_USER_SET;
+ saved_state->isf.rflags = (ts->rflags & ~EFL_USER_CLEAR) | EFL_USER_SET;
  */
 kern_return_t
 find_resume_flag(mach_vm_address_t start, struct patch_location **patch_locations)
@@ -194,6 +213,20 @@ failure:
 /*
  * function to lookup address where we need to patch task_for_pid()
  * so we can restore ability to get kernel task port from userland
+ * code that needs to be patched:
+ * @ xnu/bsd/vm/vm_unix.c
+ kern_return_t
+ task_for_pid(struct task_for_pid_args *args)
+ {
+  (...)
+    // Always check if pid == 0
+    if (pid == 0) {
+        (void ) copyout((char *)&t1, task_addr, sizeof(mach_port_name_t));
+        AUDIT_MACH_SYSCALL_EXIT(KERN_FAILURE);
+        return(KERN_FAILURE);
+    }
+  (...)
+ }
  */
 kern_return_t
 find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_location *topatch)
@@ -299,6 +332,21 @@ end:
 /*
  * function to lookup address where we need to patch kauth in ptrace()
  * so we can patch anti-debug described in Apple Technical Note TN2127
+ * the code that needs to be patched is the following:
+ * @ xnu/bsd/kern/mach_process.c
+ int
+ ptrace(struct proc *p, struct ptrace_args *uap, int32_t *retval)
+ {
+   (...)
+    if (uap->req == PT_ATTACH) {
+    int		err;
+ 
+        if ( kauth_authorize_process(proc_ucred(p), KAUTH_PROCESS_CANTRACE, t, (uintptr_t)&err, 0, 0) == 0 ) {
+            (...)
+        }
+    }
+ }
+
  */
 kern_return_t
 find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_location *topatch)
