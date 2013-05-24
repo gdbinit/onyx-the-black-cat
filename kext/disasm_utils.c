@@ -232,7 +232,7 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
         }
         
         // XXX: this is ugly but does the job :X
-        for (int i = 0; i < decodedInstructionsCount; i++)
+        for (uint32_t i = 0; i < decodedInstructionsCount; i++)
         {
             // find call to audit_arg_mach_port1()
             if (decodedInstructions[i].opcode == I_CALL &&
@@ -244,12 +244,12 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
                 {
                     LOG_DEBUG("DEBUG] Found call to audit_arg_mach_port1\n");
                     // try to find the test and conditional jump in the next instructions
-                    for (int x = i; x < i + 10; x++)
+                    for (uint32_t x = i; x < i + 10 && x < decodedInstructionsCount; x++)
                     {
                         if (decodedInstructions[x].opcode == I_TEST)
                         {
                             LOG_DEBUG("[DEBUG] Found test at %p\n", (void*)decodedInstructions[x].addr);
-                            for (int z = x; z < x + 10; z++)
+                            for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
                             {
                                 if (decodedInstructions[z].opcode == I_JZ)
                                 {
@@ -349,12 +349,12 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
                 {
                     LOG_DEBUG("DEBUG] Found call to kauth_authorize_process\n");
                     // try to find the test and conditional jump in the next instructions
-                    for (int x = i; x < i + 10; x++)
+                    for (uint32_t x = i; x < i + 10 && x < decodedInstructionsCount; x++)
                     {
                         if (decodedInstructions[x].opcode == I_TEST)
                         {
                             LOG_DEBUG("[DEBUG] Found test at %p\n", (void*)decodedInstructions[x].addr);
-                            for (int z = x; z < x + 10; z++)
+                            for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
                             {
                                 if (decodedInstructions[z].opcode == I_JNZ)
                                 {
