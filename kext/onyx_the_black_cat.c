@@ -87,7 +87,6 @@ onyx_the_black_cat_start (kmod_info_t * ki, void * d)
     {
         return KERN_FAILURE;
     }
-        
 	// ALL DONE
 	return KERN_SUCCESS;
 }
@@ -102,6 +101,8 @@ onyx_the_black_cat_stop (kmod_info_t * ki, void * d)
 	cleanup_sysent();
     // remove any patches
     patch_resume_flag(DISABLE);
+    patch_task_for_pid(DISABLE);
+    patch_kauth(DISABLE);
 	// remove the kernel control socket
     remove_kern_control();
     // ALL DONE
