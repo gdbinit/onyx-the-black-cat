@@ -157,6 +157,37 @@ patch_task_for_pid(int cmd)
 kern_return_t
 patch_kauth(int cmd)
 {
+    static struct patch_location patch = {0};
+    if (patch.address == 0)
+    {
+        mach_vm_address_t ptrace_sym = solve_kernel_symbol(&g_kernel_info, "_ptrace");
+        mach_vm_address_t kauth_authorize_process_sym = solve_kernel_symbol(&g_kernel_info, "_kauth_authorize_process");
+        if (ptrace_sym && kauth_authorize_process_sym)
+        {
+            if (find_kauth(ptrace_sym, kauth_authorize_process_sym, &patch))
+            {
+                LOG_MSG("[ERROR] Can't find location to patch kauth!\n");
+                return KERN_FAILURE;
+            }
+        }
+        else
+        {
+            LOG_MSG("[ERROR] Can't solve required symbols to patch kauth()\n");
+            return KERN_FAILURE;
+        }
+    }
+    if (cmd == ENABLE)
+    {
+        enable_kernel_write();
+        memset(patch.address, 0x90, patch.size);
+        disable_kernel_write();
+    }
+    else if (cmd == DISABLE)
+    {
+        enable_kernel_write();
+        memcpy(patch.address, patch.orig_bytes, patch.size);
+        disable_kernel_write();
+    }
     return KERN_SUCCESS;
 }
 
