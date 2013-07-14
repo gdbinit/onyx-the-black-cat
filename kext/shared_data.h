@@ -44,18 +44,16 @@
 
 #define BUNDLE_ID   "put.as.onyx_the_black_cat"
 #define MAGIC       "SpecialisRevelio"
-// the supported commands
-#define PATCH_TASK_FOR_PID     0x0
-#define UNPATCH_TASK_FOR_PID   0x1
-#define ANTI_PTRACE_ON         0x2
-#define ANTI_PTRACE_OFF        0x3
-#define ANTI_SYSCTL_ON         0x4
-#define ANTI_SYSCTL_OFF        0x5
-#define ANTI_KAUTH_ON          0x6
-#define ANTI_KAUTH_OFF         0x7
-#define PATCH_RESUME_FLAG      0x8
-#define UNPATCH_RESUME_FLAG    0x9
-#define PATCH_SINGLESTEP       0xa
-#define UNPATCH_SINGLESTEP     0xb
+
+/*
+#define TASK_FOR_PID 0x0
+#define ANTI_PTRACE  0x1
+#define ANTI_SYSCTL  0x2
+#define ANTI_KAUTH   0x3
+#define RESUME_FLAG  0x4
+#define SINGLESTEP   0x5
+*/
+#define FUNS         6
+#define FUN_NAMES    {"task_for_pid(0)", "anti-anti-ptrace", "sysctl anti-anti-debug", "kauth", "resume flag", "single-step-on-branch"}
 
 #endif

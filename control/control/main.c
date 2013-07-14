@@ -66,7 +66,6 @@ static int g_socket = -1;
 
 #define MAXLEN 4098
 #define MAXARG 512
-#define MAGIC "SpecialisRevelio"
 
 int
 connect_to_kernel(void)
@@ -110,37 +109,34 @@ connect_to_kernel(void)
     return 0;
 }
 
+char *fun_names[] = FUN_NAMES;
+
+void
+execute_cmd(int opt)
+{
+    char *magic = MAGIC;
+    size_t magic_len = strlen(magic)+1;
+    int ret = setsockopt(g_socket, SYSPROTO_CONTROL, opt, (void*)magic, (socklen_t)magic_len);
+    if (ret)
+    {
+        printf("[ERROR] Kernel command execution failed!\n");
+    }
+}
+
+void toggle_state(int fun) {
+	execute_cmd(fun);
+}
+
 void
 print_menu(void)
 {
     printf("[Onyx The Black Cat Kernel Control]\n");
 	printf("[menu]\n");
-	printf("[1] enable anti-anti-ptrace\n");
-	printf("[2] disable anti-anti-ptrace\n");
-	printf("[3] enable sysctl anti-anti-debug\n");
-	printf("[4] disable sysctl anti-anti-debug\n");
-	printf("[5] patch resume flag\n");
-	printf("[6] restore resume flag\n");
-	printf("[7] patch task_for_pid(0)\n");
-	printf("[8] restore task_for_pid()\n");
-	printf("[9] patch kauth\n");
-    printf("[0] restore kauth\n");
-    printf("[a] activate single-step-on-branch\n");
-    printf("[b] restore single-step-on-branch\n");
+	for(int i = 0; i < FUNS; i++) {
+		printf("[%x] [%s] %s\n", i + 1, "toggle" /*get_state(i)? "disable": "enable"*/, fun_names[i]);
+	}
 	printf("[h] help\n");
 	printf("[q] exit\n");
-}
-
-void
-execute_cmd(int cmd)
-{
-    char *magic = MAGIC;
-    size_t magic_len = strlen(magic)+1;
-    int ret = setsockopt(g_socket, SYSPROTO_CONTROL, cmd, (void*)magic, (socklen_t)magic_len);
-    if (ret)
-    {
-        printf("[ERROR] Kernel command execution failed!\n");
-    }
 }
 
 void main_menu()
@@ -151,42 +147,6 @@ void main_menu()
         str = getchar();
         switch(str)
         {
-			case '1':
-                execute_cmd(ANTI_PTRACE_ON);
-				break;
-			case '2':
-                execute_cmd(ANTI_PTRACE_OFF);
-                break;
-            case '3':
-                execute_cmd(ANTI_SYSCTL_ON);
-				break;
-			case '4':
-                execute_cmd(ANTI_SYSCTL_OFF);
-				break;
-			case '5':
-                execute_cmd(PATCH_RESUME_FLAG);
-				break;
-			case '6':
-                execute_cmd(UNPATCH_RESUME_FLAG);
-				break;
-			case '7':
-                execute_cmd(PATCH_TASK_FOR_PID);
-				break;
-			case '8':
-                execute_cmd(UNPATCH_TASK_FOR_PID);
-				break;
-			case '9':
-                execute_cmd(ANTI_KAUTH_ON);
-				break;
-            case '0':
-                execute_cmd(ANTI_KAUTH_OFF);
-                break;
-            case 'a':
-                execute_cmd(PATCH_SINGLESTEP);
-                break;
-            case 'b':
-                execute_cmd(UNPATCH_SINGLESTEP);
-                break;
 			case 'h':
 				print_menu();
 				break;
@@ -199,9 +159,15 @@ void main_menu()
 			case 'x':
 				exit(0);
 				break;
-			default:
+			default: {
+				int n = str - '0' - 1;
+				if(n >= 0 && n < FUNS) {
+					toggle_state(n);
+					break;
+				}
 				printf("Invalid selection!\n");
                 break;
+			}
         }
     }
     while(getchar() != '\n');
