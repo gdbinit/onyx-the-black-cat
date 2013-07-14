@@ -68,6 +68,17 @@ static u_int32_t g_client_unit = 0;
 static kern_ctl_ref g_client_ctl_ref = NULL;
 static boolean_t g_kern_ctl_registered = FALSE;
 
+int (*g_funs[])(int cmd) = {
+	patch_task_for_pid,
+	anti_ptrace,
+	anti_sysctl,
+	patch_kauth,
+	patch_resume_flag,
+	patch_singlestep
+};
+#define FUN_NUM (sizeof(g_funs) / sizeof(g_funs[0]))
+char g_patch_states[FUN_NUM];
+
 #pragma mark Kernel Control struct and handler functions
 
 // described at Network Kernel Extensions Programming Guide
@@ -216,7 +227,6 @@ ctl_get(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
 static int
 ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *data, size_t len)
 {
-    int error = 0;
     if (len == 0 || data == NULL)
     {
         LOG_MSG("[ERROR] Invalid data to command.\n");
@@ -228,72 +238,20 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
         LOG_MSG("[ERROR] Invalid spell!\n");
         return EINVAL;
     }
-        
-	switch (opt)
-	{
-        case PATCH_TASK_FOR_PID:
-        {
-            patch_task_for_pid(ENABLE);
-            break;
-        }
-        case UNPATCH_TASK_FOR_PID:
-        {
-            patch_task_for_pid(DISABLE);
-            break;
-        }
-        case ANTI_PTRACE_ON:
-        {
-            anti_ptrace(ENABLE);
-            break;
-        }
-        case ANTI_PTRACE_OFF:
-        {
-            anti_ptrace(DISABLE);
-            break;
-        }
-        case ANTI_SYSCTL_ON:
-        {
-            anti_sysctl(ENABLE);
-            break;
-        }
-        case ANTI_SYSCTL_OFF:
-        {
-            anti_sysctl(DISABLE);
-            break;
-        }
-        case ANTI_KAUTH_ON:
-        {
-            patch_kauth(ENABLE);
-            break;
-        }
-        case ANTI_KAUTH_OFF:
-        {
-            patch_kauth(DISABLE);
-            break;
-        }
-        case PATCH_RESUME_FLAG:
-        {
-            patch_resume_flag(ENABLE);
-            break;
-        }
-        case UNPATCH_RESUME_FLAG:
-        {
-            patch_resume_flag(DISABLE);
-            break;
-        }
-        case PATCH_SINGLESTEP:
-        {
-            patch_singlestep(ENABLE);
-            break;
-        }
-        case UNPATCH_SINGLESTEP:
-        {
-            patch_singlestep(DISABLE);
-            break;
-        }
-        default:
-            error = ENOTSUP;
-            break;
-    }
-    return error;
+	
+	int fun_num = opt;
+	
+	if(fun_num >= 0 && fun_num < FUN_NUM) {
+		char *state = &g_patch_states[fun_num];
+		int (*fun)(int cmd) = g_funs[fun_num];
+		
+		if(fun(!*state) == KERN_SUCCESS) {
+			*state = !*state;
+			return 0;
+		} else {
+			return EFAULT;
+		}		
+	}
+	
+	return ENOTSUP;
 }
