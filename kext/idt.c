@@ -40,7 +40,9 @@
 
 #include "idt.h"
 
-// retrieve the address of the IDT
+/* retrieve the address of the IDT
+ * should never be a bogus value?
+ */
 void
 get_addr_idt(mach_vm_address_t *idt)
 {

@@ -42,7 +42,12 @@
 #include "idt.h"
 
 // global vars
+void *g_sysent_addr;
 struct sysent *g_sysent;
+struct sysent_mavericks *g_sysent_mav;
+
+/* to distinguish between Mavericks and others because of different sysent structure */
+extern const int  version_major;
 
 // 16 bytes IDT descriptor, used for 32 and 64 bits kernels (64 bit capable cpus!)
 struct descriptor_idt
@@ -72,14 +77,22 @@ static void* bruteforce_sysent(void);
 kern_return_t
 find_sysent(void)
 {
-    LOG_DEBUG("[DEBUG] Finding sysent table...\n");
+    LOG_DEBUG("[DEBUG] Finding sysent table...");
     // retrieve sysent address
-    g_sysent = (struct sysent*)bruteforce_sysent();
+    g_sysent_addr = bruteforce_sysent();
     // if we can't find it return a kernel module failure
-    if (g_sysent == NULL)
+    if (g_sysent_addr == NULL)
     {
-        LOG_MSG("[ERROR] Cannot find sysent table\n");
+        LOG_ERROR("Cannot find sysent table");
         return KERN_FAILURE;
+    }
+    if (version_major >= MAVERICKS)
+    {
+        g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
+    }
+    else
+    {
+        g_sysent = (struct sysent*)g_sysent_addr;
     }
     return KERN_SUCCESS;
 }
@@ -91,13 +104,28 @@ kern_return_t
 cleanup_sysent(void)
 {
     enable_kernel_write();
-    if (real_ptrace != NULL && g_sysent[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+    if (version_major >= MAVERICKS)
     {
-        g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        if (real_ptrace != NULL && g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        {
+            g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        }
+        if (real_sysctl != NULL && g_sysent_mav[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        {
+            g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        }
+        
     }
-    if (real_sysctl != NULL && g_sysent[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+    else
     {
-        g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        if (real_ptrace != NULL && g_sysent[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        {
+            g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        }
+        if (real_sysctl != NULL && g_sysent[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        {
+            g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        }
     }
     disable_kernel_write();
     return KERN_SUCCESS;
@@ -190,7 +218,7 @@ bruteforce_sysent(void)
     // retrieves the address of the IDT
     mach_vm_address_t idt_address = 0;
     get_addr_idt(&idt_address);
-    printf("[DEBUG] IDT Address is %llx\n", idt_address);
+    LOG_DEBUG("IDT Address is 0x%llx\n", idt_address);
     // calculate the address of the int80 handler
     mach_vm_address_t int80_address = calculate_int80address(idt_address);
     // search backwards for the kernel base address (mach-o header)
@@ -203,19 +231,41 @@ bruteforce_sysent(void)
     // bruteforce search for sysent in __DATA segment
     while (data_address <= data_limit)
     {
-        struct sysent *table = (struct sysent*)data_address;
-        if((void*)table != NULL &&
-           table[SYS_exit].sy_narg      == 1 &&
-           table[SYS_fork].sy_narg      == 0 &&
-           table[SYS_read].sy_narg      == 3 &&
-           table[SYS_wait4].sy_narg     == 4 &&
-           table[SYS_ptrace].sy_narg    == 4 &&
-           table[SYS_getxattr].sy_narg  == 6 &&
-           table[SYS_listxattr].sy_narg == 4 &&
-           table[SYS_recvmsg].sy_narg   == 3 )
+        /* mavericks or higher */
+        if (version_major >= MAVERICKS)
         {
-            LOG_DEBUG("[DEBUG] exit() address is %p\n", (void*)table[SYS_exit].sy_call);
-            return table;
+            struct sysent_mavericks *table = (struct sysent_mavericks*)data_address;
+            if((void*)table != NULL &&
+               table[SYS_exit].sy_narg      == 1 &&
+               table[SYS_fork].sy_narg      == 0 &&
+               table[SYS_read].sy_narg      == 3 &&
+               table[SYS_wait4].sy_narg     == 4 &&
+               table[SYS_ptrace].sy_narg    == 4 &&
+               table[SYS_getxattr].sy_narg  == 6 &&
+               table[SYS_listxattr].sy_narg == 4 &&
+               table[SYS_recvmsg].sy_narg   == 3 )
+            {
+                LOG_DEBUG("[DEBUG] exit() address is %p\n", (void*)table[SYS_exit].sy_call);
+                return (void*)data_address;
+            }
+        }
+        /* all previous versions */
+        else
+        {
+            struct sysent *table = (struct sysent*)data_address;
+            if((void*)table != NULL &&
+               table[SYS_exit].sy_narg      == 1 &&
+               table[SYS_fork].sy_narg      == 0 &&
+               table[SYS_read].sy_narg      == 3 &&
+               table[SYS_wait4].sy_narg     == 4 &&
+               table[SYS_ptrace].sy_narg    == 4 &&
+               table[SYS_getxattr].sy_narg  == 6 &&
+               table[SYS_listxattr].sy_narg == 4 &&
+               table[SYS_recvmsg].sy_narg   == 3 )
+            {
+                LOG_DEBUG("[DEBUG] exit() address is %p\n", (void*)table[SYS_exit].sy_call);
+                return (void*)data_address;
+            }
         }
         data_address++;
     }

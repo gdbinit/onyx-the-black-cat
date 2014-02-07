@@ -75,6 +75,7 @@ struct patch_location
 typedef int32_t	sy_call_t(struct proc *, void *, int *);
 typedef void	sy_munge_t(const void *, void *);
 
+/* for all versions before Mavericks, found in bsd/sys/sysent.h */
 struct sysent {		/* system call table */
 	int16_t		sy_narg;        /* number of args */
 	int8_t		sy_resv;        /* reserved  */
@@ -88,15 +89,29 @@ struct sysent {		/* system call table */
 								 */
 };
 
+/* Mavericks sysent structure is something like this */
+struct sysent_mavericks {
+    sy_call_t   *sy_call;
+    sy_munge_t  *sy_arg_munge32;
+    sy_munge_t  *sy_arg_munge64;
+    int32_t     sy_return_type;
+    int16_t     sy_narg;
+    uint16_t    sy_arg_bytes;
+};
+
 #define DISABLE 0
 #define ENABLE 1
 
+#define MAVERICKS   13
+
 #if DEBUG
-#define LOG_DEBUG(...) printf(__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ## __VA_ARGS__)
 #else
-#define LOG_DEBUG(...) do {} while (0)
+#define LOG_DEBUG(fmt, ...) do {} while (0)
 #endif
 
 #define LOG_MSG(...) printf(__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) printf("[ERROR] " fmt "\n", ## __VA_ARGS__)
+#define LOG_INFO(fmt, ...) printf("[INFO] " fmt "\n", ## __VA_ARGS__)
 
 #endif

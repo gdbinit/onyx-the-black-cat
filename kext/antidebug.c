@@ -56,7 +56,10 @@
 #define ISSET(t, f)     ((t) & (f))
 
 // external variables
+extern void *g_sysent_addr;
 extern struct sysent *g_sysent;
+extern struct sysent_mavericks *g_sysent_mav;
+extern const int  version_major;
 
 // prototypes
 int (*real_ptrace)(struct proc *, struct ptrace_args *, int *);
@@ -75,17 +78,45 @@ anti_ptrace(int cmd)
     if (cmd == DISABLE)
     {
         // restore the pointer to the original function
-        if (real_ptrace != NULL)
-            g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        if (version_major >= MAVERICKS)
+        {
+            if (real_ptrace != NULL)
+            {
+                g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original ptrace() function!");
+                return KERN_FAILURE;
+            }
+        }
         else
-            return KERN_FAILURE;
+        {
+            if (real_ptrace != NULL)
+            {
+                g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original ptrace() function!");
+                return KERN_FAILURE;
+            }
+        }
     }
     else if (cmd == ENABLE)
     {
-        // save address of the real function
-        real_ptrace = (void*)g_sysent[SYS_ptrace].sy_call;
-        // hook the syscall by replacing the pointer in sysent
-        g_sysent[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
+        if (version_major >= MAVERICKS)
+        {
+            // save address of the real function
+            real_ptrace = (void*)g_sysent_mav[SYS_ptrace].sy_call;
+            // hook the syscall by replacing the pointer in sysent
+            g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
+        }
+        else
+        {
+            real_ptrace = (void*)g_sysent[SYS_ptrace].sy_call;
+            g_sysent[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
+        }
     }
     disable_kernel_write();
     return KERN_SUCCESS;
@@ -97,21 +128,49 @@ anti_sysctl(int cmd)
     enable_kernel_write();
     if (cmd == DISABLE)
     {
-        if (real_sysctl != NULL)
-            g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        if (version_major >= MAVERICKS)
+        {
+            if (real_sysctl != NULL)
+            {
+                g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original sysctl() function!");
+                return KERN_FAILURE;
+            }
+        }
         else
-            return KERN_FAILURE;
+        {
+            if (real_sysctl != NULL)
+            {
+                g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original sysctl() function!");
+                return KERN_FAILURE;
+            }
+        }
     }
     else if (cmd == ENABLE)
     {
-        real_sysctl = (void*)g_sysent[SYS___sysctl].sy_call;
-        g_sysent[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
+        if (version_major >= MAVERICKS)
+        {
+            real_sysctl = (void*)g_sysent_mav[SYS___sysctl].sy_call;
+            g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
+        }
+        else
+        {
+            real_sysctl = (void*)g_sysent[SYS___sysctl].sy_call;
+            g_sysent[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
+        }
     }
     disable_kernel_write();
     return KERN_SUCCESS;
 }
 
-#pragma mark Our hooked functions
+#pragma mark The hook replacement functions
 
 /*
  * Hijack ptrace syscall
