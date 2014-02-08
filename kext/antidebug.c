@@ -40,12 +40,14 @@
 
 #include "antidebug.h"
 #include <sys/kernel_types.h>
+#include <sys/proc.h>
+
 #include "sysent.h"
 #include "proc.h"
 #include "my_data_definitions.h"
 #include "cpu_protections.h"
 
-/** ptrace request */
+/* ptrace request */
 #define PT_DENY_ATTACH          31
 #define P_LNOATTACH     0x00001000
 #define P_LTRACED       0x00000400
@@ -227,8 +229,10 @@ onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
     // verify if it's a PT_DENY_ATTACH request and fix for all processes that call it
     if (uap->req == PT_DENY_ATTACH)
     {
-        proc_name(p->p_pid, processname, sizeof(processname));
-        LOG_MSG("[INFO] Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)\n", p->p_pid, processname);
+        /* retrieve pid using exported functions so we don't need definition of struct proc */
+        pid_t pid = proc_pid(p);
+        proc_name(pid, processname, sizeof(processname));
+        LOG_MSG("[INFO] Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)\n", pid, processname);
         return 0;
     }
     // else it's business as usual, we are not interested in messing with other requests
@@ -268,9 +272,10 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
     if (mib[0]==CTL_KERN && mib[1]==KERN_PROC && mib[2]==KERN_PROC_PID)
     {
         // copy process name
-        proc_name(p->p_pid, processname, sizeof(processname));
+        pid_t pid = proc_pid(p);
+        proc_name(pid, processname, sizeof(processname));
         // is it a 64bits process?
-        if (p->p_flag & P_LP64)
+        if (proc_is64bit(p) == 1)
         {
             struct user64_kinfo_proc kpr;
             // then copy the result from the destination buffer ( *oldp from sysctl call) to kernel space so we can edit
@@ -278,7 +283,7 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
                 // we can display the PID of the calling program, which can be useful
-                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 64 bits process with PID %d (%s)! Patching...\n", p->p_pid, processname);
+                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 64 bits process with PID %d (%s)! Patching...\n", pid, processname);
                 // modify the p_flag because:
                 // We're being debugged if the P_TRACED flag is set.
                 // return ( (info.kp_proc.p_flag & P_TRACED) != 0 );
@@ -300,7 +305,7 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
             copyin(uap->old, &kpr, sizeof(kpr));
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
-                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 32 bits process with PID %d (%s)! Patching...\n", p->p_pid, processname);
+                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 32 bits process with PID %d (%s)! Patching...\n", pid, processname);
                 kpr.kp_proc.p_flag = kpr.kp_proc.p_flag & ~P_TRACED;
                 copyout(&kpr, uap->old,sizeof(kpr));
             }

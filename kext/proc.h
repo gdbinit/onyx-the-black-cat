@@ -62,6 +62,8 @@
  *
  */
 
+/* NOTE: all these structures are unmodified since Snow Leopard up to Mavericks */
+
 #ifndef onyx_proc_h
 #define onyx_proc_h
 
@@ -75,214 +77,6 @@
 #include <sys/types.h> 
 #include <sys/proc.h>
 #include <sys/sysctl.h>
-
-// we need this to complete the proc structure
-// osfmk/i386/locks.h
-struct lck_mtx_t {
-	union {
-		struct {
-			volatile uintptr_t              lck_mtxd_owner;
-			unsigned long                   lck_mtxd_ptr;
-			volatile uint32_t               lck_mtxd_waiters:16,
-		lck_mtxd_pri:8,
-		lck_mtxd_ilocked:1,
-		lck_mtxd_mlocked:1,
-		lck_mtxd_promoted:1,
-		lck_mtxd_spin:1,
-		lck_mtxd_pad4:4;        /* padding */
-#ifdef __x86_64__
-			unsigned int                    lck_mtxd_pad;
-#endif
-		} lck_mtxd;
-		struct {
-			unsigned long                   lck_mtxi_tag;
-			struct _lck_mtx_ext_            *lck_mtxi_ptr;
-			unsigned long                   lck_mtxi_pad;
-		} lck_mtxi;
-	} lck_mtx_sw;
-};
-
-// osfmk/i386/locks.h
-struct lck_spin_t {
-	unsigned long   interlock;
-	unsigned long   lck_spin_pad[9];        /* XXX - usimple_lock_data_t */
-};
-
-
-
-// ripped from xnu/bsd/sys/proc_internal.h
-// Needed so we can access the proc structure passed to the syscall
-// I had to comment some fields because other kernel includes would be needed
-// This should be valid since we are not doing any copies of this structure (just having it's definition to avoid dereference pointer to incomplete types)
-// else things might go wrong (big kabooommm)
-// FOR SNOW LEOPARD
-struct	proc {
-	LIST_ENTRY(proc) p_list;		/* List of all processes. */
-	
-	pid_t		p_pid;			/* Process identifier. (static)*/
-	void * 		task;			/* corresponding task (static)*/
-	struct	proc *	p_pptr;		 	/* Pointer to parent process.(LL) */
-	pid_t		p_ppid;			/* process's parent pid number */
-	pid_t		p_pgrpid;		/* process group id of the process (LL)*/
-	
-	struct lck_mtx_t 	p_mlock;		/* mutex lock for proc */
-	
-	char		p_stat;			/* S* process status. (PL)*/
-	char		p_shutdownstate;
-	char		p_kdebug;		/* P_KDEBUG eq (CC)*/ 
-	char		p_btrace;		/* P_BTRACE eq (CC)*/
-	
-	LIST_ENTRY(proc) p_pglist;		/* List of processes in pgrp.(PGL) */
-	LIST_ENTRY(proc) p_sibling;		/* List of sibling processes. (LL)*/
-	LIST_HEAD(, proc) p_children;		/* Pointer to list of children. (LL)*/
-	TAILQ_HEAD( , uthread) p_uthlist; 	/* List of uthreads  (PL) */
-	
-	LIST_ENTRY(proc) p_hash;		/* Hash chain. (LL)*/
-	TAILQ_HEAD( ,eventqelt) p_evlist;	/* (PL) */
-	
-	struct lck_mtx_t	p_fdmlock;		/* proc lock to protect fdesc */
-	
-	/* substructures: */
-	kauth_cred_t	p_ucred;		/* Process owner's identity. (PL) */
-	struct	filedesc *p_fd;			/* Ptr to open files structure. (PFDL) */
-	struct	pstats *p_stats;		/* Accounting/statistics (PL). */
-	struct	plimit *p_limit;		/* Process limits.(PL) */
-	
-	struct	sigacts *p_sigacts;		/* Signal actions, state (PL) */
-	int		p_siglist;		/* signals captured back from threads */
-	struct lck_spin_t	p_slock;		/* spin lock for itimer/profil protection */
-	
-#define	p_rlimit	p_limit->pl_rlimit
-	
-	struct	plimit *p_olimit;		/* old process limits  - not inherited by child  (PL) */
-	unsigned int	p_flag;			/* P_* flags. (atomic bit ops) */
-	unsigned int	p_lflag;		/* local flags  (PL) */
-	unsigned int	p_listflag;		/* list flags (LL) */
-	unsigned int	p_ladvflag;		/* local adv flags (atomic) */
-	int		p_refcount;		/* number of outstanding users(LL) */
-	int		p_childrencnt;		/* children holding ref on parent (LL) */
-	int		p_parentref;		/* children lookup ref on parent (LL) */
-	
-	pid_t		p_oppid;	 	/* Save parent pid during ptrace. XXX */
-	u_int		p_xstat;		/* Exit status for wait; also stop signal. */
-	
-#ifdef _PROC_HAS_SCHEDINFO_
-	/* may need cleanup, not used */
-	u_int		p_estcpu;	 	/* Time averaged value of p_cpticks.(used by aio and proc_comapre) */
-	fixpt_t		p_pctcpu;	 	/* %cpu for this process during p_swtime (used by aio)*/
-	u_int		p_slptime;		/* used by proc_compare */
-#endif /* _PROC_HAS_SCHEDINFO_ */
-	
-	struct	itimerval p_realtimer;		/* Alarm timer. (PSL) */
-	struct	timeval p_rtime;		/* Real time.(PSL)  */
-	struct	itimerval p_vtimer_user;	/* Virtual timers.(PSL)  */
-	struct	itimerval p_vtimer_prof;	/* (PSL) */
-	
-	struct	timeval	p_rlim_cpu;		/* Remaining rlim cpu value.(PSL) */
-	int		p_debugger;		/*  NU 1: can exec set-bit programs if suser */
-	boolean_t	sigwait;	/* indication to suspend (PL) */
-	void	*sigwait_thread;	/* 'thread' holding sigwait(PL)  */
-	void	*exit_thread;		/* Which thread is exiting(PL)  */
-	int	p_vforkcnt;		/* number of outstanding vforks(PL)  */
-	void *  p_vforkact;     	/* activation running this vfork proc)(static)  */
-	int	p_fpdrainwait;		/* (PFDL) */
-	pid_t	p_contproc;	/* last PID to send us a SIGCONT (PL) */
-	
-	/* Following fields are info from SIGCHLD (PL) */
-	pid_t	si_pid;			/* (PL) */
-	u_int   si_status;		/* (PL) */
-	u_int	si_code;		/* (PL) */
-	uid_t	si_uid;			/* (PL) */
-	
-	void * vm_shm;			/* (SYSV SHM Lock) for sysV shared memory */
-	
-#if CONFIG_DTRACE
-	user_addr_t			p_dtrace_argv;			/* (write once, read only after that) */
-	user_addr_t			p_dtrace_envp;			/* (write once, read only after that) */
-	lck_mtx_t			p_dtrace_sprlock;		/* sun proc lock emulation */
-	int				p_dtrace_probes;		/* (PL) are there probes for this proc? */
-	u_int				p_dtrace_count;			/* (sprlock) number of DTrace tracepoints */
-	struct dtrace_ptss_page*	p_dtrace_ptss_pages;		/* (sprlock) list of user ptss pages */
-	struct dtrace_ptss_page_entry*	p_dtrace_ptss_free_list;	/* (atomic) list of individual ptss entries */
-	struct dtrace_helpers*		p_dtrace_helpers;		/* (dtrace_lock) DTrace per-proc private */
-	struct dof_ioctl_data*		p_dtrace_lazy_dofs;		/* (sprlock) unloaded dof_helper_t's */
-#endif /* CONFIG_DTRACE */
-	
-	/* XXXXXXXXXXXXX BCOPY'ed on fork XXXXXXXXXXXXXXXX */
-	/* The following fields are all copied upon creation in fork. */
-#define	p_startcopy	p_argslen
-	
-	u_int	p_argslen;	 /* Length of process arguments. */
-	int  	p_argc;			/* saved argc for sysctl_procargs() */
-	user_addr_t user_stack;		/* where user stack was allocated */
-	struct	vnode *p_textvp;	/* Vnode of executable. */
-	off_t	p_textoff;		/* offset in executable vnode */
-	
-	sigset_t p_sigmask;		/* DEPRECATED */
-	sigset_t p_sigignore;	/* Signals being ignored. (PL) */
-	sigset_t p_sigcatch;	/* Signals being caught by user.(PL)  */
-	
-	u_char	p_priority;	/* (NU) Process priority. */
-	u_char	p_resv0;	/* (NU) User-priority based on p_cpu and p_nice. */
-	char	p_nice;		/* Process "nice" value.(PL) */
-	u_char	p_resv1;	/* (NU) User-priority based on p_cpu and p_nice. */
-	
-#if CONFIG_MACF
-	int	p_mac_enforce;			/* MAC policy enforcement control */
-#endif
-	
-	char	p_comm[MAXCOMLEN+1];
-	char	p_name[(2*MAXCOMLEN)+1];	/* PL */
-	
-	struct 	pgrp *p_pgrp;	/* Pointer to process group. (LL) */
-	int		p_iopol_disk;	/* disk I/O policy (PL) */
-	uint32_t	p_csflags;	/* flags for codesign (PL) */
-	uint32_t	p_pcaction;	/* action  for process control on starvation */
-	uint8_t p_uuid[16];		/* from LC_UUID load command */
-	
-	/* End area that is copied on creation. */
-	/* XXXXXXXXXXXXX End of BCOPY'ed on fork (AIOLOCK)XXXXXXXXXXXXXXXX */
-#define	p_endcopy	p_aio_total_count
-	int		p_aio_total_count;		/* all allocated AIO requests for this proc */
-	int		p_aio_active_count;		/* all unfinished AIO requests for this proc */
-	TAILQ_HEAD( , aio_workq_entry ) p_aio_activeq; 	/* active async IO requests */
-	TAILQ_HEAD( , aio_workq_entry ) p_aio_doneq;	/* completed async IO requests */
-	
-	//	struct klist p_klist;  /* knote list (PL ?)*/
-	
-	struct	rusage *p_ru;	/* Exit information. (PL) */
-	thread_t 	p_signalholder;
-	thread_t 	p_transholder;
-	
-	/* DEPRECATE following field  */
-	u_short	p_acflag;	/* Accounting flags. */
-	
-	struct lctx *p_lctx;		/* Pointer to login context. */
-	LIST_ENTRY(proc) p_lclist;	/* List of processes in lctx. */
-	user_addr_t 	p_threadstart;		/* pthread start fn */
-	user_addr_t 	p_wqthread;		/* pthread workqueue fn */
-	int 	p_pthsize;			/* pthread size */
-	user_addr_t	p_targconc;		/* target concurrency ptr */
-	void * 	p_wqptr;			/* workq ptr */
-	int 	p_wqsize;			/* allocated size */
-	boolean_t       p_wqiniting;            /* semaphore to serialze wq_open */
-	//	lck_spin_t	p_wqlock;		/* lock to protect work queue */
-	struct  timeval p_start;        	/* starting time */
-	void *	p_rcall;
-	int		p_ractive;
-	int	p_idversion;		/* version of process identity */
-	void *	p_pthhash;			/* pthread waitqueue hash */
-#if DIAGNOSTIC
-	unsigned int p_fdlock_pc[4];
-	unsigned int p_fdunlock_pc[4];
-#if SIGNAL_DEBUG
-	unsigned int lockpc[8];
-	unsigned int unlockpc[8];
-#endif /* SIGNAL_DEBUG */
-#endif /* DIAGNOSTIC */
-	uint64_t	p_dispatchqueue_offset;
-};
-
 
 // bsd/sys/proc.h
 #define	P_TRACED	0x00000800
@@ -404,7 +198,7 @@ struct kinfo_proc {
 
 
 // 64 bits stuff
-
+// @ bsd/sys/vm.h
 struct user_vmspace {
 	int             vm_refcnt;      /* number of references */
 	user_addr_t     vm_shm __attribute((aligned(8)));                       /* SYS5 shared memory private data XXX */
@@ -418,7 +212,7 @@ struct user_vmspace {
 	user_addr_t vm_maxsaddr;        /* user VA at max stack growth */
 };
 
-
+// @ bsd/sys/sysctl.h
 struct user64_pcred {
 	char    pc_lock[72];            /* opaque content */
 	user64_addr_t   pc_ucred;       /* Current credentials. */
@@ -429,7 +223,7 @@ struct user64_pcred {
 	int     p_refcnt;               /* Number of references. */
 };
 
-
+// @ bsd/sys/proc_internal.h
 struct user64_extern_proc {
 	union {
 		struct {
@@ -482,7 +276,8 @@ struct user64_extern_proc {
 	user_addr_t     p_ru __attribute((aligned(8))); /* Exit information. XXX */
 };
 
-
+#define CONFIG_LCTX 1
+// @ bsd/sys/sysctl.h
 struct user64_kinfo_proc {
 	struct  user64_extern_proc kp_proc;     /* proc structure */
 	struct  user64_eproc {
@@ -512,5 +307,6 @@ struct user64_kinfo_proc {
 #endif
 	} kp_eproc;
 };
+
 
 #endif
