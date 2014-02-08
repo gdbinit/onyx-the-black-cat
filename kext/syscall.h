@@ -89,21 +89,21 @@
 #define	SYS_open           5
 #define	SYS_close          6
 #define	SYS_wait4          7
-			/* 8  old creat */
+/* 8  old creat */
 #define	SYS_link           9
 #define	SYS_unlink         10
-			/* 11  old execv */
+/* 11  old execv */
 #define	SYS_chdir          12
 #define	SYS_fchdir         13
 #define	SYS_mknod          14
 #define	SYS_chmod          15
 #define	SYS_chown          16
-			/* 17  old break */
+/* 17  old break */
 #define	SYS_getfsstat      18
-			/* 19  old lseek */
+/* 19  old lseek */
 #define	SYS_getpid         20
-			/* 21  old mount */
-			/* 22  old umount */
+/* 21  old mount */
+/* 22  old umount */
 #define	SYS_setuid         23
 #define	SYS_getuid         24
 #define	SYS_geteuid        25
@@ -119,14 +119,14 @@
 #define	SYS_fchflags       35
 #define	SYS_sync           36
 #define	SYS_kill           37
-			/* 38  old stat */
+/* 38  old stat */
 #define	SYS_getppid        39
-			/* 40  old lstat */
+/* 40  old lstat */
 #define	SYS_dup            41
 #define	SYS_pipe           42
 #define	SYS_getegid        43
-#define	SYS_profil         44
-			/* 45  old ktrace */
+/* 44  old profil */
+/* 45  old ktrace */
 #define	SYS_sigaction      46
 #define	SYS_getgid         47
 #define	SYS_sigprocmask    48
@@ -143,75 +143,75 @@
 #define	SYS_execve         59
 #define	SYS_umask          60
 #define	SYS_chroot         61
-			/* 62  old fstat */
-			/* 63  used internally , reserved */
-			/* 64  old getpagesize */
+/* 62  old fstat */
+/* 63  used internally , reserved */
+/* 64  old getpagesize */
 #define	SYS_msync          65
 #define	SYS_vfork          66
-			/* 67  old vread */
-			/* 68  old vwrite */
-			/* 69  old sbrk */
-			/* 70  old sstk */
-			/* 71  old mmap */
-			/* 72  old vadvise */
+/* 67  old vread */
+/* 68  old vwrite */
+/* 69  old sbrk */
+/* 70  old sstk */
+/* 71  old mmap */
+/* 72  old vadvise */
 #define	SYS_munmap         73
 #define	SYS_mprotect       74
 #define	SYS_madvise        75
-			/* 76  old vhangup */
-			/* 77  old vlimit */
+/* 76  old vhangup */
+/* 77  old vlimit */
 #define	SYS_mincore        78
 #define	SYS_getgroups      79
 #define	SYS_setgroups      80
 #define	SYS_getpgrp        81
 #define	SYS_setpgid        82
 #define	SYS_setitimer      83
-			/* 84  old wait */
+/* 84  old wait */
 #define	SYS_swapon         85
 #define	SYS_getitimer      86
-			/* 87  old gethostname */
-			/* 88  old sethostname */
+/* 87  old gethostname */
+/* 88  old sethostname */
 #define	SYS_getdtablesize  89
 #define	SYS_dup2           90
-			/* 91  old getdopt */
+/* 91  old getdopt */
 #define	SYS_fcntl          92
 #define	SYS_select         93
-			/* 94  old setdopt */
+/* 94  old setdopt */
 #define	SYS_fsync          95
 #define	SYS_setpriority    96
 #define	SYS_socket         97
 #define	SYS_connect        98
-			/* 99  old accept */
+/* 99  old accept */
 #define	SYS_getpriority    100
-			/* 101  old send */
-			/* 102  old recv */
-			/* 103  old sigreturn */
+/* 101  old send */
+/* 102  old recv */
+/* 103  old sigreturn */
 #define	SYS_bind           104
 #define	SYS_setsockopt     105
 #define	SYS_listen         106
-			/* 107  old vtimes */
-			/* 108  old sigvec */
-			/* 109  old sigblock */
-			/* 110  old sigsetmask */
+/* 107  old vtimes */
+/* 108  old sigvec */
+/* 109  old sigblock */
+/* 110  old sigsetmask */
 #define	SYS_sigsuspend     111
-			/* 112  old sigstack */
-			/* 113  old recvmsg */
-			/* 114  old sendmsg */
-			/* 115  old vtrace */
+/* 112  old sigstack */
+/* 113  old recvmsg */
+/* 114  old sendmsg */
+/* 115  old vtrace */
 #define	SYS_gettimeofday   116
 #define	SYS_getrusage      117
 #define	SYS_getsockopt     118
-			/* 119  old resuba */
+/* 119  old resuba */
 #define	SYS_readv          120
 #define	SYS_writev         121
 #define	SYS_settimeofday   122
 #define	SYS_fchown         123
 #define	SYS_fchmod         124
-			/* 125  old recvfrom */
+/* 125  old recvfrom */
 #define	SYS_setreuid       126
 #define	SYS_setregid       127
 #define	SYS_rename         128
-			/* 129  old truncate */
-			/* 130  old ftruncate */
+/* 129  old truncate */
+/* 130  old ftruncate */
 #define	SYS_flock          131
 #define	SYS_mkfifo         132
 #define	SYS_sendto         133
@@ -222,64 +222,64 @@
 #define	SYS_utimes         138
 #define	SYS_futimes        139
 #define	SYS_adjtime        140
-			/* 141  old getpeername */
+/* 141  old getpeername */
 #define	SYS_gethostuuid    142
-			/* 143  old sethostid */
-			/* 144  old getrlimit */
-			/* 145  old setrlimit */
-			/* 146  old killpg */
+/* 143  old sethostid */
+/* 144  old getrlimit */
+/* 145  old setrlimit */
+/* 146  old killpg */
 #define	SYS_setsid         147
-			/* 148  old setquota */
-			/* 149  old qquota */
-			/* 150  old getsockname */
+/* 148  old setquota */
+/* 149  old qquota */
+/* 150  old getsockname */
 #define	SYS_getpgid        151
 #define	SYS_setprivexec    152
 #define	SYS_pread          153
 #define	SYS_pwrite         154
 #define	SYS_nfssvc         155
-			/* 156  old getdirentries */
+/* 156  old getdirentries */
 #define	SYS_statfs         157
 #define	SYS_fstatfs        158
 #define	SYS_unmount        159
-			/* 160  old async_daemon */
+/* 160  old async_daemon */
 #define	SYS_getfh          161
-			/* 162  old getdomainname */
-			/* 163  old setdomainname */
-			/* 164  */
+/* 162  old getdomainname */
+/* 163  old setdomainname */
+/* 164  */
 #define	SYS_quotactl       165
-			/* 166  old exportfs */
+/* 166  old exportfs */
 #define	SYS_mount          167
-			/* 168  old ustat */
+/* 168  old ustat */
 #define	SYS_csops          169
-			/* 170  old table */
-			/* 171  old wait3 */
-			/* 172  old rpause */
+#define	SYS_csops_audittoken 170
+/* 171  old wait3 */
+/* 172  old rpause */
 #define	SYS_waitid         173
-			/* 174  old getdents */
-			/* 175  old gc_control */
-#define	SYS_add_profil     176
-			/* 177  */
-			/* 178  */
-			/* 179  */
+/* 174  old getdents */
+/* 175  old gc_control */
+/* 176  old add_profil */
+/* 177  */
+/* 178  */
+/* 179  */
 #define	SYS_kdebug_trace   180
 #define	SYS_setgid         181
 #define	SYS_setegid        182
 #define	SYS_seteuid        183
 #define	SYS_sigreturn      184
 #define	SYS_chud           185
-			/* 186  */
+/* 186  */
 #define	SYS_fdatasync      187
 #define	SYS_stat           188
 #define	SYS_fstat          189
 #define	SYS_lstat          190
 #define	SYS_pathconf       191
 #define	SYS_fpathconf      192
-			/* 193  */
+/* 193  */
 #define	SYS_getrlimit      194
 #define	SYS_setrlimit      195
 #define	SYS_getdirentries  196
 #define	SYS_mmap           197
-			/* 198  __syscall */
+/* 198  __syscall */
 #define	SYS_lseek          199
 #define	SYS_truncate       200
 #define	SYS_ftruncate      201
@@ -287,25 +287,25 @@
 #define	SYS_mlock          203
 #define	SYS_munlock        204
 #define	SYS_undelete       205
-#define	SYS_ATsocket       206
-#define	SYS_ATgetmsg       207
-#define	SYS_ATputmsg       208
-#define	SYS_ATPsndreq      209
-#define	SYS_ATPsndrsp      210
-#define	SYS_ATPgetreq      211
-#define	SYS_ATPgetrsp      212
-			/* 213  Reserved for AppleTalk */
-			/* 214  */
-			/* 215  */
-#define	SYS_mkcomplex      216
-#define	SYS_statv          217
-#define	SYS_lstatv         218
-#define	SYS_fstatv         219
+/* 206  old ATsocket */
+/* 207  old ATgetmsg */
+/* 208  old ATputmsg */
+/* 209  old ATsndreq */
+/* 210  old ATsndrsp */
+/* 211  old ATgetreq */
+/* 212  old ATgetrsp */
+/* 213  Reserved for AppleTalk */
+/* 214  */
+/* 215  */
+#define	SYS_open_dprotected_np 216
+/* 217  */
+/* 218  */
+/* 219  */
 #define	SYS_getattrlist    220
 #define	SYS_setattrlist    221
 #define	SYS_getdirentriesattr 222
 #define	SYS_exchangedata   223
-			/* 224  old checkuseraccess / fsgetpath ( which moved to 427 ) */
+/* 224  old checkuseraccess / fsgetpath ( which moved to 427 ) */
 #define	SYS_searchfs       225
 #define	SYS_delete         226
 #define	SYS_copyfile       227
@@ -327,10 +327,10 @@
 #define	SYS_initgroups     243
 #define	SYS_posix_spawn    244
 #define	SYS_ffsctl         245
-			/* 246  */
+/* 246  */
 #define	SYS_nfsclnt        247
 #define	SYS_fhopen         248
-			/* 249  */
+/* 249  */
 #define	SYS_minherit       250
 #define	SYS_semsys         251
 #define	SYS_msgsys         252
@@ -338,7 +338,7 @@
 #define	SYS_semctl         254
 #define	SYS_semget         255
 #define	SYS_semop          256
-			/* 257  */
+/* 257  */
 #define	SYS_msgctl         258
 #define	SYS_msgget         259
 #define	SYS_msgsnd         260
@@ -376,7 +376,7 @@
 #define	SYS_mkdir_extended 292
 #define	SYS_identitysvc    293
 #define	SYS_shared_region_check_np 294
-			/* 295  old shared_region_map_np */
+/* 295  old shared_region_map_np */
 #define	SYS_vm_pressure_monitor 296
 #define	SYS_psynch_rw_longrdlock 297
 #define	SYS_psynch_rw_yieldwrlock 298
@@ -402,12 +402,12 @@
 #define	SYS_aio_read       318
 #define	SYS_aio_write      319
 #define	SYS_lio_listio     320
-			/* 321  old __pthread_cond_wait */
+/* 321  old __pthread_cond_wait */
 #define	SYS_iopolicysys    322
 #define	SYS_process_policy 323
 #define	SYS_mlockall       324
 #define	SYS_munlockall     325
-			/* 326  */
+/* 326  */
 #define	SYS_issetugid      327
 #define	SYS___pthread_kill 328
 #define	SYS___pthread_sigmask 329
@@ -416,7 +416,7 @@
 #define	SYS___pthread_markcancel 332
 #define	SYS___pthread_canceled 333
 #define	SYS___semwait_signal 334
-			/* 335  old utrace */
+/* 335  old utrace */
 #define	SYS_proc_info      336
 #define	SYS_sendfile       337
 #define	SYS_stat64         338
@@ -433,11 +433,11 @@
 #define	SYS___pthread_fchdir 349
 #define	SYS_audit          350
 #define	SYS_auditon        351
-			/* 352  */
+/* 352  */
 #define	SYS_getauid        353
 #define	SYS_setauid        354
-#define	SYS_getaudit       355
-#define	SYS_setaudit       356
+/* 355  old getaudit */
+/* 356  old setaudit */
 #define	SYS_getaudit_addr  357
 #define	SYS_setaudit_addr  358
 #define	SYS_auditctl       359
@@ -454,13 +454,13 @@
 #define	SYS___old_semwait_signal 370
 #define	SYS___old_semwait_signal_nocancel 371
 #define	SYS_thread_selfid  372
-			/* 373  */
-			/* 374  */
-			/* 375  */
-			/* 376  */
-			/* 377  */
-			/* 378  */
-			/* 379  */
+#define	SYS_ledger         373
+/* 374  */
+/* 375  */
+/* 376  */
+/* 377  */
+/* 378  */
+/* 379  */
 #define	SYS___mac_execve   380
 #define	SYS___mac_syscall  381
 #define	SYS___mac_get_file 382
@@ -516,11 +516,27 @@
 #define	SYS_audit_session_port 432
 #define	SYS_pid_suspend    433
 #define	SYS_pid_resume     434
-#define	SYS_pid_hibernate  435
-#define	SYS_pid_shutdown_sockets 436
-			/* 437  old shared_region_slide_np */
+/* 435  */
+/* 436  */
+/* 437  old shared_region_slide_np */
 #define	SYS_shared_region_map_and_slide_np 438
-#define SYS_kas_info       439
-#define	SYS_MAXSYSCALL	440
+#define	SYS_kas_info       439
+#define	SYS_memorystatus_control 440
+#define	SYS_guarded_open_np 441
+#define	SYS_guarded_close_np 442
+#define	SYS_guarded_kqueue_np 443
+#define	SYS_change_fdguard_np 444
+/* 445  old __proc_suppress */
+#define	SYS_proc_rlimit_control 446
+#define	SYS_connectx       447
+#define	SYS_disconnectx    448
+#define	SYS_peeloff        449
+#define	SYS_socket_delegate 450
+#define	SYS_telemetry      451
+#define	SYS_proc_uuid_policy 452
+#define	SYS_memorystatus_get_level 453
+#define	SYS_system_override 454
+#define	SYS_vfs_purge      455
+#define	SYS_MAXSYSCALL	456
 
 #endif
