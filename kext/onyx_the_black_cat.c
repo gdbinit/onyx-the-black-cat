@@ -7,7 +7,7 @@
  *         \/     \/\/           \/
  *                    The Black Cat
  *
- * Copyright (c) fG!, 2011, 2012, 2013 - reverser@put.as - http://reverse.put.as
+ * Copyright (c) fG!, 2011, 2012, 2013, 2014 - reverser@put.as - http://reverse.put.as
  * All rights reserved.
  *
  * Based on original code by Landon J. Fuller <landonf@opendarwin.org>
@@ -52,7 +52,7 @@
 #include "disasm_utils.h"
 #include "patchkernel.h"
 
-#define VERSION "2.0"
+#define VERSION "3.0"
 
 // globals
 struct kernel_info g_kernel_info;
@@ -64,18 +64,12 @@ kern_return_t
 onyx_the_black_cat_start (kmod_info_t * ki, void * d) 
 {
     printf(
-		   "    ,o888888o.     b.             8 `8.`8888.      ,8' `8.`8888.      ,8'\n"
-		   " . 8888     `88.   888o.          8  `8.`8888.    ,8'   `8.`8888.    ,8'\n"
-		   ",8 8888       `8b  Y88888o.       8   `8.`8888.  ,8'     `8.`8888.  ,8'\n"
-		   "88 8888        `8b .`Y888888o.    8    `8.`8888.,8'       `8.`8888.,8'\n"
-		   "88 8888         88 8o. `Y888888o. 8     `8.`88888'         `8.`88888'\n"
-		   "88 8888         88 8`Y8o. `Y88888o8      `8. 8888          .88.`8888.\n"
-		   "88 8888        ,8P 8   `Y8o. `Y8888       `8 8888         .8'`8.`8888.\n"
-		   "`8 8888       ,8P  8      `Y8o. `Y8        8 8888        .8'  `8.`8888.\n"
-		   " ` 8888     ,88'   8         `Y8o.`        8 8888       .8'    `8.`8888.\n"
-		   "    `8888888P'     8            `Yo        8 8888      .8'      `8.`8888.\n"
-           "                                                            The Black Cat\n"
-		   "                                                                   v%s\n", VERSION);
+           " _____                 \n"
+           "|     |___ _ _ _ _     \n"
+           "|  |  |   | | |_'_|    \n"
+           "|_____|_|_|_  |_,_|    \n"
+           "          |___|        \n"
+           "      The Black Cat v%s\n", VERSION);
     // install the kernel control so we can enable/disable features
     install_kern_control();
     // locate sysent table
