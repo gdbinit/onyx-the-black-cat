@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/sysctl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static bool AmIBeingDebugged(void)
     // Returns true if the current process is being debugged (either
@@ -45,7 +46,7 @@ static bool AmIBeingDebugged(void)
 	}
     else
 	printf("NO DEBUGGER FOUND\n");
-    return;
+    return 0;
 }
 
 int main ()
