@@ -328,19 +328,16 @@ static kern_return_t
 process_kernel_mach_header(void *kernel_header, struct kernel_info *kinfo)
 {
     struct mach_header *mh = (struct mach_header*)kernel_header;
-    int header_size = 0;
-    if (mh->magic == MH_MAGIC)
-    {
-        header_size = sizeof(struct mach_header);
-    }
-    else if (mh->magic == MH_MAGIC_64)
-    {
-        header_size = sizeof(struct mach_header_64);
-    }
-    else
-    {
-        LOG_ERROR("Header buffer does not contain valid Mach-O binary!");
-        return KERN_FAILURE;
+    int header_size = sizeof(struct mach_header);
+    switch (mh->magic) {
+        case MH_MAGIC:
+            break;
+        case MH_MAGIC_64:
+            header_size = sizeof(struct mach_header_64);
+            break;
+        default:
+            LOG_ERROR("Header buffer does not contain valid Mach-O binary!");
+            return KERN_FAILURE;
     }
 
     struct load_command *load_cmd = NULL;

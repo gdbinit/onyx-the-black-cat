@@ -281,20 +281,16 @@ process_header(const mach_vm_address_t target_address, uint64_t *data_address, u
 {
     // verify if it's a valid mach-o binary
     struct mach_header *mh = (struct mach_header*)target_address;
-    int header_size = 0;
-    if (mh->magic == MH_MAGIC)
-    {
-        header_size = sizeof(struct mach_header);
-    }
-    else if (mh->magic == MH_MAGIC_64)
-    {
-        header_size = sizeof(struct mach_header_64);
-    }
-    // error
-    else
-    {
-        LOG_ERROR("Not a valid mach-o binary address passed to %s", __FUNCTION__);
-        return 1;
+    int header_size = sizeof(struct mach_header);
+    switch (mh->magic) {
+        case MH_MAGIC:
+            break;
+        case MH_MAGIC_64:
+            header_size = sizeof(struct mach_header_64);
+            break;
+        default:
+            LOG_ERROR("Not a valid mach-o binary address passed to %s", __FUNCTION__);
+            return 1;
     }
     
     // find the last command offset
