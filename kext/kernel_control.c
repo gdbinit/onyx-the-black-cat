@@ -96,12 +96,12 @@ install_kern_control(void)
     if (error == 0)
     {
         g_kern_ctl_registered = TRUE;
-        LOG_DEBUG("[DEBUG] Onyx kernel control installed successfully!\n");
+        LOG_DEBUG("Onyx kernel control installed successfully!");
         return KERN_SUCCESS;
     }
     else
     {
-        LOG_MSG("[ERROR] Failed to install Onyx kernel control!\n");
+        LOG_ERROR("Failed to install Onyx kernel control!");
         return KERN_FAILURE;
     }
 }
@@ -118,12 +118,12 @@ remove_kern_control(void)
             return KERN_SUCCESS;
         case EINVAL:
         {
-            LOG_MSG("[ERROR] The kernel control reference is invalid.\n");
+            LOG_ERROR("The kernel control reference is invalid.");
             return KERN_FAILURE;
         }
         case EBUSY:
         {
-            LOG_MSG("[ERROR] The kernel control has clients still attached.\n");
+            LOG_ERROR("The kernel control has clients still attached.");
             return KERN_FAILURE;
         }
         default:
@@ -145,7 +145,7 @@ queue_userland_data(pid_t pid)
     if (g_client_ctl_ref == NULL) return KERN_FAILURE;
     
     error = ctl_enqueuedata(g_client_ctl_ref, g_client_unit, &pid, sizeof(pid_t), 0);
-    if (error) LOG_MSG("[ERROR] ctl_enqueuedata failed with error: %d\n", error);
+    if (error) LOG_ERROR("ctl_enqueuedata failed with error: %d", error);
     return error;
 }
 
@@ -165,7 +165,7 @@ ctl_connect(kern_ctl_ref ctl_ref, struct sockaddr_ctl *sac, void **unitinfo)
     // we will need these to queue data to userland
     g_client_unit = sac->sc_unit;
     g_client_ctl_ref = ctl_ref;
-    LOG_DEBUG("[DEBUG] Client connected!\n");
+    LOG_DEBUG("Client connected!");
     return 0;
 }
 
@@ -219,13 +219,13 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
     int error = 0;
     if (len == 0 || data == NULL)
     {
-        LOG_MSG("[ERROR] Invalid data to command.\n");
+        LOG_ERROR("Invalid data to command.");
         return EINVAL;
     }
     // XXX: lame authentication :-]
     if (strcmp((char*)data, MAGIC) != 0)
     {
-        LOG_MSG("[ERROR] Invalid spell!\n");
+        LOG_ERROR("Invalid spell!");
         return EINVAL;
     }
         

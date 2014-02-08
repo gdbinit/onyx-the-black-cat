@@ -81,14 +81,14 @@ init_kernel_info(struct kernel_info *kinfo)
     error = vnode_lookup(MACH_KERNEL, 0, &kernel_vnode, NULL);
     if (error)
     {
-        LOG_MSG("[ERROR] Vnode lookup on mach_kernel failed!\n");
+        LOG_ERROR("Vnode lookup on mach_kernel failed!");
         return KERN_FAILURE;
     }
 
     void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
     if (kernel_header == NULL)
     {
-        LOG_MSG("[ERROR] Can't allocate memory.\n");
+        LOG_ERROR("Can't allocate memory.");
         return KERN_FAILURE;
     }
     // read and process kernel header from filesystem
@@ -100,7 +100,7 @@ init_kernel_info(struct kernel_info *kinfo)
     // compute kaslr slide
     get_running_text_address(kinfo);
     kinfo->kaslr_slide = kinfo->running_text_addr - kinfo->disk_text_addr;
-    LOG_DEBUG("[DEBUG] kernel aslr slide is %llx\n", kinfo->kaslr_slide);
+    LOG_DEBUG("kernel aslr slide is 0x%llx", kinfo->kaslr_slide);
     // we know the location of linkedit and offsets into symbols and their strings
     // now we need to read linkedit into a buffer so we can process it later
     // __LINKEDIT total size is around 1MB
@@ -108,7 +108,7 @@ init_kernel_info(struct kernel_info *kinfo)
     kinfo->linkedit_buf = _MALLOC(kinfo->linkedit_size, M_TEMP, M_ZERO);
     if (kinfo->linkedit_buf == NULL)
     {
-        LOG_MSG("[ERROR] Could not allocate enough memory for __LINKEDIT segment\n");
+        LOG_ERROR("Could not allocate enough memory for __LINKEDIT segment");
         _FREE(kernel_header, M_TEMP);
         return KERN_FAILURE;
     }
@@ -123,7 +123,7 @@ success:
     vnode_put(kernel_vnode);
     return KERN_SUCCESS;
 failure:
-    LOG_MSG("[ERROR] Something failed at %s\n", __FUNCTION__);
+    LOG_ERROR("Something failed at %s", __FUNCTION__);
     if (kinfo->linkedit_buf != NULL) _FREE(kinfo->linkedit_buf, M_TEMP);
     _FREE(kernel_header, M_TEMP);
     vnode_put(kernel_vnode);
@@ -169,7 +169,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             // find if symbol matches
             if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
             {
-                LOG_DEBUG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%x)\n", symbol_to_solve, nlist->n_value + kinfo->kaslr_slide, nlist->n_value);
+                LOG_DEBUG("Found symbol %s at 0x%llx (non-aslr 0x%x)", symbol_to_solve, nlist->n_value + kinfo->kaslr_slide, nlist->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
                 return (nlist->n_value + kinfo->kaslr_slide);
             }
@@ -187,7 +187,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             // find if symbol matches
             if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
             {
-                LOG_DEBUG("[DEBUG] found symbol %s at 0x%llx (non-aslr 0x%llx)\n", symbol_to_solve, nlist64->n_value + kinfo->kaslr_slide, nlist64->n_value);
+                LOG_DEBUG("Found symbol %s at 0x%llx (non-aslr 0x%llx)", symbol_to_solve, nlist64->n_value + kinfo->kaslr_slide, nlist64->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
                 return (nlist64->n_value + kinfo->kaslr_slide);
             }
@@ -221,7 +221,7 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
             // lookup the next symbol
             nlist = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + (i+1) * sizeof(struct nlist_64));
             symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist->n_un.n_strx);
-            LOG_DEBUG("[DEBUG] found next symbol %s at %llx (%s)\n", symbol, nlist->n_value, symbol_string);
+            LOG_DEBUG("Found next symbol %s at 0x%llx (%s)", symbol, nlist->n_value, symbol_string);
             return (nlist->n_value + kinfo->kaslr_slide);
         }
     }
@@ -242,14 +242,14 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
     uio_t uio = uio_create(1, 0, UIO_SYSSPACE, UIO_READ);
     if (uio == NULL)
     {
-        LOG_MSG("[ERROR] uio_create returned null!\n");
+        LOG_ERROR("uio_create returned null!");
         return KERN_FAILURE;
     }
     // imitate the kernel and read a single page from the header
     error = uio_addiov(uio, CAST_USER_ADDR_T(buffer), HEADER_SIZE);
     if (error)
     {
-        LOG_MSG("[ERROR] uio_addiov returned error!\n");
+        LOG_ERROR("uio_addiov returned error!");
         return error;
     }
     // read kernel vnode into the buffer
@@ -257,7 +257,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
     
     if (error)
     {
-        LOG_MSG("[ERROR] VNOP_READ failed!\n");
+        LOG_ERROR("VNOP_READ failed!");
         return error;
     }
     else if (uio_resid(uio)) return EINVAL;
@@ -266,13 +266,13 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
     uint32_t magic = *(uint32_t*)buffer;
     if (magic == FAT_CIGAM)
     {
-        LOG_DEBUG("[DEBUG] Target is fat %d!\n", (int)sizeof(void*));
+        LOG_DEBUG("Target is fat %d!", (int)sizeof(void*));
         struct fat_header *fh = (struct fat_header*)buffer;
         struct fat_arch *fa = (struct fat_arch*)(buffer + sizeof(struct fat_header));
         uint32_t file_offset = 0;
         for (uint32_t i = 0; i < ntohl(fh->nfat_arch); i++)
         {
-            LOG_DEBUG("[DEBUG] process arch %d\n", ntohl(fa->cputype));
+            LOG_DEBUG("Process arch %d", ntohl(fa->cputype));
             if (sizeof(void*) == 8 && ntohl(fa->cputype) == CPU_TYPE_X86_64)
             {
                 file_offset = ntohl(fa->offset);
@@ -280,7 +280,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
             }
             else if (sizeof(void*) == 4 && ntohl(fa->cputype) == CPU_TYPE_X86)
             {
-                LOG_DEBUG("[DEBUG] reading 32bits kernel\n");
+                LOG_DEBUG("Reading 32bits kernel");
                 file_offset = ntohl(fa->offset);
                 break;
             }
@@ -339,7 +339,7 @@ process_kernel_mach_header(void *kernel_header, struct kernel_info *kinfo)
     }
     else
     {
-        LOG_MSG("[ERROR] Header buffer does not contain valid Mach-O binary!\n");
+        LOG_ERROR("Header buffer does not contain valid Mach-O binary!");
         return KERN_FAILURE;
     }
 

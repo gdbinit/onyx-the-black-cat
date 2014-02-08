@@ -98,7 +98,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
     _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
     if (decodedInstructions == NULL)
     {
-        LOG_MSG("[ERROR] Decoded instructions allocation failed!\n");
+        LOG_ERROR("Decoded instructions allocation failed!");
         return -1;
     }
     
@@ -130,7 +130,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
         if (res == DECRES_INPUTERR)
         {
             // Error handling...
-            LOG_MSG("[ERROR] Distorm failed to disassemble!\n");
+            LOG_ERROR("Distorm failed to disassemble!");
             goto failure;
         }
 
@@ -140,7 +140,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
                 decodedInstructions[i].ops[1].type == O_IMM &&
                 decodedInstructions[i].imm.dword == RF_FLAG_32BITS)
             {
-                LOG_DEBUG("[DEBUG] Found AND at %llx %x\n", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
+                LOG_DEBUG("Found AND at 0x%llx %x", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
                 struct patch_location *new = _MALLOC(sizeof(struct patch_location), M_TEMP, M_WAITOK);
                 new->address = decodedInstructions[i].addr;
                 new->size = decodedInstructions[i].size;
@@ -156,7 +156,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
                 new->size = decodedInstructions[i].size;
                 memcpy(new->orig_bytes, new->address, new->size);
                 LL_PREPEND(*patch_locations, new);
-                LOG_DEBUG("[DEBUG] Found MOV at %llx %llx\n", decodedInstructions[i].addr, decodedInstructions[i].imm.qword);
+                LOG_DEBUG("Found MOV at 0x%llx %llx", decodedInstructions[i].addr, decodedInstructions[i].imm.qword);
             }
             // find jumps to locate the other functions that contain the value we want to modify
             else if (decodedInstructions[i].opcode == I_JMP &&
@@ -166,7 +166,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
                 struct jumps *new = _MALLOC(sizeof(struct jumps), M_TEMP, M_WAITOK);
                 new->address = rip_address;
                 LL_PREPEND(jump_locations, new);
-                LOG_DEBUG("[DEBUG] %llx JMP %d to %llx\n", decodedInstructions[i].addr, decodedInstructions[i].ops[0].type, rip_address);
+                LOG_DEBUG("0x%llx JMP %d to 0x%llx", decodedInstructions[i].addr, decodedInstructions[i].ops[0].type, rip_address);
             }
         }
         
@@ -193,7 +193,7 @@ find_resume_flag(mach_vm_address_t start, struct patch_location **patch_location
     struct patch_location *tmp = NULL;
     LL_FOREACH(*patch_locations, tmp)
     {
-        LOG_DEBUG("patch location: %llx\n", tmp->address);
+        LOG_DEBUG("patch location: 0x%llx", tmp->address);
     }
 #endif
     
@@ -236,7 +236,7 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
     _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
     if (decodedInstructions == NULL)
     {
-        LOG_MSG("[ERROR] Decoded instructions allocation failed!\n");
+        LOG_ERROR("Decoded instructions allocation failed!");
         return ret;
     }
     
@@ -260,7 +260,7 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
         if (res == DECRES_INPUTERR)
         {
             // Error handling...
-            LOG_MSG("[ERROR] Distorm failed to disassemble!\n");
+            LOG_ERROR("Distorm failed to disassemble!");
             goto end;
         }
         
@@ -275,18 +275,18 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
                 // found location of call to audit_arg_mach_port1()
                 if (rip_address == symbol_addr)
                 {
-                    LOG_DEBUG("DEBUG] Found call to audit_arg_mach_port1\n");
+                    LOG_DEBUG("Found call to audit_arg_mach_port1");
                     // try to find the test and conditional jump in the next instructions
                     for (uint32_t x = i; x < i + 10 && x < decodedInstructionsCount; x++)
                     {
                         if (decodedInstructions[x].opcode == I_TEST)
                         {
-                            LOG_DEBUG("[DEBUG] Found test at %p\n", (void*)decodedInstructions[x].addr);
+                            LOG_DEBUG("Found test at %p", (void*)decodedInstructions[x].addr);
                             for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
                             {
                                 if (decodedInstructions[z].opcode == I_JZ)
                                 {
-                                    LOG_DEBUG("[DEBUG] Found conditional jump at %p\n", (void*)decodedInstructions[z].addr);
+                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
                                     topatch->address = decodedInstructions[z].addr;
                                     topatch->size = decodedInstructions[z].size;
                                     memcpy(topatch->orig_bytes, topatch->address, topatch->size);
@@ -296,7 +296,7 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
                                 }
                                 else if (decodedInstructions[z].opcode == I_JNZ)
                                 {
-                                    LOG_DEBUG("[DEBUG] Found conditional jump at %p\n", (void*)decodedInstructions[z].addr);
+                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
                                     topatch->address = decodedInstructions[z].addr;
                                     topatch->size = decodedInstructions[z].size;
                                     memcpy(topatch->orig_bytes, topatch->address, topatch->size);
@@ -356,7 +356,7 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
     _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
     if (decodedInstructions == NULL)
     {
-        LOG_MSG("[ERROR] Decoded instructions allocation failed!\n");
+        LOG_ERROR("Decoded instructions allocation failed!");
         return ret;
     }
     
@@ -380,7 +380,7 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
         if (res == DECRES_INPUTERR)
         {
             // Error handling...
-            LOG_MSG("[ERROR] Distorm failed to disassemble!\n");
+            LOG_ERROR("Distorm failed to disassemble!");
             goto end;
         }
         
@@ -395,18 +395,18 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
                 // found location of call to kauth_authorize_process()
                 if (rip_address == symbol_addr)
                 {
-                    LOG_DEBUG("DEBUG] Found call to kauth_authorize_process\n");
+                    LOG_DEBUG("Found call to kauth_authorize_process");
                     // try to find the test and conditional jump in the next instructions
                     for (uint32_t x = i; x < i + 10 && x < decodedInstructionsCount; x++)
                     {
                         if (decodedInstructions[x].opcode == I_TEST)
                         {
-                            LOG_DEBUG("[DEBUG] Found test at %p\n", (void*)decodedInstructions[x].addr);
+                            LOG_DEBUG("Found test at %p", (void*)decodedInstructions[x].addr);
                             for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
                             {
                                 if (decodedInstructions[z].opcode == I_JNZ)
                                 {
-                                    LOG_DEBUG("[DEBUG] Found conditional jump at %p\n", (void*)decodedInstructions[z].addr);
+                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
                                     topatch->address = decodedInstructions[z].addr;
                                     topatch->size = decodedInstructions[z].size;
                                     memcpy(topatch->orig_bytes, topatch->address, topatch->size);
@@ -447,12 +447,12 @@ end:
 static kern_return_t
 disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations)
 {
-    LOG_DEBUG("[DEBUG] Executing %s starting at address %llx\n", __FUNCTION__, start);
+    LOG_DEBUG("Executing %s starting at address %llx", __FUNCTION__, start);
     // allocate space for disassembly output
     _DInst *decodedInstructions = _MALLOC(sizeof(_DInst) * MAX_INSTRUCTIONS, M_TEMP, M_WAITOK);
     if (decodedInstructions == NULL)
     {
-        LOG_MSG("[ERROR] Decoded instructions allocation failed!\n");
+        LOG_ERROR("Decoded instructions allocation failed!");
         return -1;
     }
     
@@ -476,7 +476,7 @@ disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations)
         if (res == DECRES_INPUTERR)
         {
             // Error handling...
-            LOG_MSG("[ERROR] Distorm failed to disassemble!\n");
+            LOG_ERROR("Distorm failed to disassemble!");
             goto failure;
         }
         
@@ -486,7 +486,7 @@ disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations)
                 decodedInstructions[i].ops[1].type == O_IMM &&
                 decodedInstructions[i].imm.dword == RF_FLAG_32BITS)
             {
-                LOG_DEBUG("[DEBUG] Found AND at %llx %x\n", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
+                LOG_DEBUG("Found AND at 0x%llx %x", decodedInstructions[i].addr, decodedInstructions[i].imm.dword);
                 // test if value already exists on the list
                 struct patch_location *tmp = NULL;
                 int exists = 0;
@@ -526,7 +526,7 @@ disasm_jumps(mach_vm_address_t start, struct patch_location **patch_locations)
                     new->size = decodedInstructions[i].size;
                     memcpy(new->orig_bytes, new->address, new->size);
                     LL_PREPEND(*patch_locations, new);
-                    LOG_DEBUG("[DEBUG] Found MOV at %llx %llx\n", decodedInstructions[i].addr, decodedInstructions[i].imm.qword);
+                    LOG_DEBUG("Found MOV at 0x%llx %llx", decodedInstructions[i].addr, decodedInstructions[i].imm.qword);
                 }
             }
         }

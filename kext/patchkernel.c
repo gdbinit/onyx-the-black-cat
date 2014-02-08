@@ -113,13 +113,13 @@ patch_task_for_pid(int cmd)
         {
             if  (find_task_for_pid(task_for_pid_sym, audit_arg_mach_port1_sym, &patch))
             {
-                LOG_MSG("[ERROR] Can't find location to patch task_for_pid()!\n");
+                LOG_ERROR("Can't find location to patch task_for_pid()!");
                 return KERN_FAILURE;
             }
         }
         else
         {
-            LOG_MSG("[ERROR] Can't solve required symbols to patch task_for_pid()\n");
+            LOG_ERROR("Can't solve required symbols to patch task_for_pid()");
             return KERN_FAILURE;
         }
     }
@@ -166,13 +166,13 @@ patch_kauth(int cmd)
         {
             if (find_kauth(ptrace_sym, kauth_authorize_process_sym, &patch))
             {
-                LOG_MSG("[ERROR] Can't find location to patch kauth!\n");
+                LOG_ERROR("Can't find location to patch kauth!");
                 return KERN_FAILURE;
             }
         }
         else
         {
-            LOG_MSG("[ERROR] Can't solve required symbols to patch kauth()\n");
+            LOG_ERROR("Can't solve required symbols to patch kauth()");
             return KERN_FAILURE;
         }
     }
@@ -203,7 +203,7 @@ patch_singlestep(int cmd)
     int i, k, mask;
     // read current debug MSR
     msr = rdmsr64(MSR_IA32_DEBUGCTLMSR);
-    LOG_DEBUG("[DEBUG] Old MSR bits: ");
+    LOG_DEBUG("Old MSR bits: ");
     for (i = 7; i>=0; i--)
     {
         mask = 1 << i;
@@ -222,7 +222,7 @@ patch_singlestep(int cmd)
     wrmsr64(MSR_IA32_DEBUGCTLMSR,0x2);
     // verify our operation
     msr = rdmsr64(MSR_IA32_DEBUGCTLMSR);
-    LOG_DEBUG("[DEBUG] New MSR bits: ");
+    LOG_DEBUG("New MSR bits: ");
     for (i = 7; i>=0; i--)
     {
         mask = 1 << i;

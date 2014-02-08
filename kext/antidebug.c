@@ -74,7 +74,7 @@ int onyx_sysctl(struct proc *, struct __sysctl_args *, int *);
 kern_return_t
 anti_ptrace(int cmd)
 {
-    LOG_DEBUG("[DEBUG] Executing anti_ptrace!\n");
+    LOG_DEBUG("Executing anti_ptrace!");
     // Mountain Lion moved sysent[] to read-only section :-)
     enable_kernel_write();
     if (cmd == DISABLE)
@@ -232,7 +232,7 @@ onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
         /* retrieve pid using exported functions so we don't need definition of struct proc */
         pid_t pid = proc_pid(p);
         proc_name(pid, processname, sizeof(processname));
-        LOG_MSG("[INFO] Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)\n", pid, processname);
+        LOG_INFO("Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)", pid, processname);
         return 0;
     }
     // else it's business as usual, we are not interested in messing with other requests
@@ -283,7 +283,7 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
                 // we can display the PID of the calling program, which can be useful
-                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 64 bits process with PID %d (%s)! Patching...\n", pid, processname);
+                LOG_INFO("Detected sysctl anti-debug trick requested by 64 bits process with PID %d (%s)! Patching...", pid, processname);
                 // modify the p_flag because:
                 // We're being debugged if the P_TRACED flag is set.
                 // return ( (info.kp_proc.p_flag & P_TRACED) != 0 );
@@ -305,7 +305,7 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
             copyin(uap->old, &kpr, sizeof(kpr));
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
-                LOG_MSG("[INFO] Detected sysctl anti-debug trick requested by 32 bits process with PID %d (%s)! Patching...\n", pid, processname);
+                LOG_INFO("Detected sysctl anti-debug trick requested by 32 bits process with PID %d (%s)! Patching...", pid, processname);
                 kpr.kp_proc.p_flag = kpr.kp_proc.p_flag & ~P_TRACED;
                 copyout(&kpr, uap->old,sizeof(kpr));
             }

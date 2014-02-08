@@ -77,7 +77,7 @@ static void* bruteforce_sysent(void);
 kern_return_t
 find_sysent(void)
 {
-    LOG_DEBUG("[DEBUG] Finding sysent table...");
+    LOG_DEBUG("Finding sysent table...");
     // retrieve sysent address
     g_sysent_addr = bruteforce_sysent();
     // if we can't find it return a kernel module failure
@@ -154,7 +154,7 @@ calculate_int80address(const mach_vm_address_t idt_address)
     int80_descriptor = (struct descriptor_idt*)(idt_address+sizeof(struct descriptor_idt)*0x80);
     int80_address = (mach_vm_address_t)(int80_descriptor->offset_middle << 16) + int80_descriptor->offset_low;
 #endif
-	LOG_DEBUG("[DEBUG] Address of interrupt 80 stub is %llu\n", int80_address);
+	LOG_DEBUG("Address of interrupt 80 stub is 0x%llx", int80_address);
     return int80_address;
 }
 
@@ -176,7 +176,7 @@ find_kernel_base(const mach_vm_address_t int80_address)
             segment_command = (struct segment_command_64*)(temp_address + sizeof(struct mach_header_64));
             if (strncmp(segment_command->segname, "__TEXT", 16) == 0)
             {
-                LOG_DEBUG("[DEBUG] Found kernel mach-o header address at %p\n", (void*)(temp_address));
+                LOG_DEBUG("Found kernel mach-o header address at %p", (void*)(temp_address));
                 return temp_address;
             }
         }
@@ -193,7 +193,7 @@ find_kernel_base(const mach_vm_address_t int80_address)
             segment_command = (struct segment_command*)((uint32_t)temp_address + sizeof(struct mach_header));
             if (strncmp(segment_command->segname, "__TEXT", 16) == 0)
             {
-                LOG_DEBUG("[DEBUG] Found kernel mach-o header address at %p\n", (void*)((uint32_t)temp_address));
+                LOG_DEBUG("Found kernel mach-o header address at %p", (void*)((uint32_t)temp_address));
                 return (mach_vm_address_t)temp_address;
             }
         }
@@ -218,7 +218,7 @@ bruteforce_sysent(void)
     // retrieves the address of the IDT
     mach_vm_address_t idt_address = 0;
     get_addr_idt(&idt_address);
-    LOG_DEBUG("IDT Address is 0x%llx\n", idt_address);
+    LOG_DEBUG("IDT Address is 0x%llx", idt_address);
     // calculate the address of the int80 handler
     mach_vm_address_t int80_address = calculate_int80address(idt_address);
     // search backwards for the kernel base address (mach-o header)
@@ -245,7 +245,7 @@ bruteforce_sysent(void)
                table[SYS_listxattr].sy_narg == 4 &&
                table[SYS_recvmsg].sy_narg   == 3 )
             {
-                LOG_DEBUG("[DEBUG] exit() address is %p\n", (void*)table[SYS_exit].sy_call);
+                LOG_DEBUG("exit() address is %p", (void*)table[SYS_exit].sy_call);
                 return (void*)data_address;
             }
         }
@@ -263,7 +263,7 @@ bruteforce_sysent(void)
                table[SYS_listxattr].sy_narg == 4 &&
                table[SYS_recvmsg].sy_narg   == 3 )
             {
-                LOG_DEBUG("[DEBUG] exit() address is %p\n", (void*)table[SYS_exit].sy_call);
+                LOG_DEBUG("exit() address is %p", (void*)table[SYS_exit].sy_call);
                 return (void*)data_address;
             }
         }
@@ -293,7 +293,7 @@ process_header(const mach_vm_address_t target_address, uint64_t *data_address, u
     // error
     else
     {
-        LOG_MSG("[ERROR] Not a valid mach-o binary address passed to %s\n", __FUNCTION__);
+        LOG_ERROR("Not a valid mach-o binary address passed to %s", __FUNCTION__);
         return 1;
     }
     
@@ -312,7 +312,7 @@ process_header(const mach_vm_address_t target_address, uint64_t *data_address, u
                 {
                     *data_address = segmentCommand->vmaddr;
                     *data_size    = segmentCommand->vmsize;
-                    LOG_DEBUG("[DEBUG] Found __DATA segment at %p!\n", (void*)*data_address);
+                    LOG_DEBUG("Found __DATA segment at %p!", (void*)*data_address);
                 }
                 break;
             }
@@ -323,7 +323,7 @@ process_header(const mach_vm_address_t target_address, uint64_t *data_address, u
                 {
                     *data_address = segmentCommand->vmaddr;
                     *data_size    = segmentCommand->vmsize;
-                    LOG_DEBUG("[DEBUG] Found __DATA segment at %p!\n", (void*)*data_address);
+                    LOG_DEBUG("Found __DATA segment at %p!", (void*)*data_address);
                 }
                 break;
             }
