@@ -75,7 +75,7 @@ static struct kern_ctl_reg g_ctl_reg = {
 	BUNDLE_ID,            /* use a reverse dns name which includes a name unique to your comany */
 	0,				   	  /* set to 0 for dynamically assigned control ID - CTL_FLAG_REG_ID_UNIT not set */
 	0,					  /* ctl_unit - ignored when CTL_FLAG_REG_ID_UNIT not set */
-	CTL_FLAG_PRIVILEGED,  /* privileged access required to access this filter */
+	0,                    /* no privileged access required to access this filter */
 	0,					  /* use default send size buffer */
 	0,                    /* Override receive buffer size */
 	ctl_connect,		  /* Called when a connection request is accepted */
