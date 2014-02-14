@@ -22,6 +22,7 @@
 		7B9668BF18A5D6C400A82135 /* kernelControl.m in Sources */ = {isa = PBXBuildFile; fileRef = 7B9668BE18A5D6C400A82135 /* kernelControl.m */; };
 		7B96690418A71AB100A82135 /* status-available.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 7B96690318A71AB100A82135 /* status-available.tiff */; };
 		7B96690618A71AC400A82135 /* status-away.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 7B96690518A71AC400A82135 /* status-away.tiff */; };
+		7BE3F0E418AE72A200712BF9 /* cat_fish.png in Resources */ = {isa = PBXBuildFile; fileRef = 7BE3F0E318AE72A200712BF9 /* cat_fish.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,7 +48,6 @@
 		7B96689418A5C3EA00A82135 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
 		7B96689618A5C3EA00A82135 /* controlAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = controlAppDelegate.h; sourceTree = "<group>"; };
 		7B96689718A5C3EA00A82135 /* controlAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = controlAppDelegate.m; sourceTree = "<group>"; };
-		7B96689A18A5C3EA00A82135 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		7B9668A218A5C3EA00A82135 /* control-guiTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "control-guiTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7B9668A318A5C3EA00A82135 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		7B9668AA18A5C3EA00A82135 /* control-guiTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "control-guiTests-Info.plist"; sourceTree = "<group>"; };
@@ -60,6 +60,8 @@
 		7B9668BE18A5D6C400A82135 /* kernelControl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = kernelControl.m; sourceTree = "<group>"; };
 		7B96690318A71AB100A82135 /* status-available.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "status-available.tiff"; sourceTree = "<group>"; };
 		7B96690518A71AC400A82135 /* status-away.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = "status-away.tiff"; sourceTree = "<group>"; };
+		7BE3F0E318AE72A200712BF9 /* cat_fish.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = cat_fish.png; sourceTree = "<group>"; };
+		7BE3F0E518AE7B0D00712BF9 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +143,7 @@
 			isa = PBXGroup;
 			children = (
 				7B9668B818A5C97F00A82135 /* cat-clipart-7.jpg */,
+				7BE3F0E318AE72A200712BF9 /* cat_fish.png */,
 				7B96688C18A5C3E900A82135 /* control-gui-Info.plist */,
 				7B96688D18A5C3E900A82135 /* InfoPlist.strings */,
 				7B96689018A5C3E900A82135 /* main.m */,
@@ -247,6 +250,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7BE3F0E418AE72A200712BF9 /* cat_fish.png in Resources */,
 				7B96688F18A5C3E900A82135 /* InfoPlist.strings in Resources */,
 				7B9668BB18A5CA5800A82135 /* Images.xcassets in Resources */,
 				7B96689518A5C3EA00A82135 /* Credits.rtf in Resources */,
@@ -316,7 +320,7 @@
 		7B96689918A5C3EA00A82135 /* MainMenu.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
-				7B96689A18A5C3EA00A82135 /* Base */,
+				7BE3F0E518AE7B0D00712BF9 /* en */,
 			);
 			name = MainMenu.xib;
 			sourceTree = "<group>";
@@ -408,7 +412,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "control-gui/control-gui-Prefix.pch";
 				INFOPLIST_FILE = "control-gui/control-gui-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -422,7 +426,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "control-gui/control-gui-Prefix.pch";
 				INFOPLIST_FILE = "control-gui/control-gui-Info.plist";
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -487,6 +491,7 @@
 				7B9668B418A5C3EA00A82135 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		7B9668B518A5C3EA00A82135 /* Build configuration list for PBXNativeTarget "control-guiTests" */ = {
 			isa = XCConfigurationList;
@@ -495,6 +500,7 @@
 				7B9668B718A5C3EA00A82135 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
