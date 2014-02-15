@@ -10,7 +10,7 @@
 int main(void)
 {
     mach_port_t port;
-    if (task_for_pid(mach_task_self(), 0, &port)
+    if (task_for_pid(mach_task_self(), 0, &port))
     {
         printf("[ERRROR] Can't get task_for_pid() for kernel task!\n");
     }
