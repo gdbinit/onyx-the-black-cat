@@ -45,6 +45,10 @@ I hope it's useful for you. It is for me.
 If you find/know any other gdb anti-debug tricks, please drop me an email with 
 some details so I can add them to the module.
 
+Note: there is a bug where if the kernel extension is unloaded and you click
+disconnect in the Cocoa GUI a kernel panic will occur. It seems to be a bug
+in kernel control because disconnect does nothing more than close the socket.
+
 Have fun.
 fG!
 

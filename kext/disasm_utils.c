@@ -229,7 +229,7 @@ failure:
  }
  */
 kern_return_t
-find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_location *topatch)
+find_task_for_pid(mach_vm_address_t start, struct patch_location *topatch)
 {
     kern_return_t ret = KERN_FAILURE;
     // allocate space for disassembly output
@@ -253,7 +253,8 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
     ci.codeOffset = start;
     mach_vm_address_t next;
     uint32_t decodedInstructionsCount = 0;
-
+    uint8_t target_register = 0;
+    int found_register = 0;
     while (1)
     {
         res = distorm_decompose(&ci, decodedInstructions, MAX_INSTRUCTIONS, &decodedInstructionsCount);
@@ -267,47 +268,44 @@ find_task_for_pid(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct
         // XXX: this is ugly but does the job :X
         for (uint32_t i = 0; i < decodedInstructionsCount; i++)
         {
-            // find call to audit_arg_mach_port1()
-            if (decodedInstructions[i].opcode == I_CALL &&
-                decodedInstructions[i].ops[0].type == O_PC)
+            // find the MOV register, [RDI+8]
+            /* this is still somewhat fragile and could be improved! */
+            if (decodedInstructions[i].opcode == I_MOV &&
+                decodedInstructions[i].ops[1].type == O_SMEM &&
+                decodedInstructions[i].ops[1].index == R_RDI &&
+                decodedInstructions[i].disp == 0x8 &&
+                decodedInstructions[i].ops[0].type == O_REG)
             {
-                mach_vm_address_t rip_address = INSTRUCTION_GET_TARGET(&decodedInstructions[i]);
-                // found location of call to audit_arg_mach_port1()
-                if (rip_address == symbol_addr)
+                target_register = decodedInstructions[i].ops[0].index;
+                found_register++;
+            }
+            else if (found_register &&
+                     decodedInstructions[i].opcode == I_TEST &&
+                     decodedInstructions[i].ops[0].type == O_REG &&
+                     decodedInstructions[i].ops[0].index == target_register)
+            {
+                /* XXX: assume next instruction is the conditional jump */
+                if (decodedInstructions[i+1].opcode == I_JZ)
                 {
-                    LOG_DEBUG("Found call to audit_arg_mach_port1");
-                    // try to find the test and conditional jump in the next instructions
-                    for (uint32_t x = i; x < i + 10 && x < decodedInstructionsCount; x++)
-                    {
-                        if (decodedInstructions[x].opcode == I_TEST)
-                        {
-                            LOG_DEBUG("Found test at %p", (void*)decodedInstructions[x].addr);
-                            for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
-                            {
-                                if (decodedInstructions[z].opcode == I_JZ)
-                                {
-                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
-                                    topatch->address = decodedInstructions[z].addr;
-                                    topatch->size = decodedInstructions[z].size;
-                                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
-                                    topatch->jmp = 0;
-                                    ret = KERN_SUCCESS;
-                                    goto end;
-                                }
-                                else if (decodedInstructions[z].opcode == I_JNZ)
-                                {
-                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
-                                    topatch->address = decodedInstructions[z].addr;
-                                    topatch->size = decodedInstructions[z].size;
-                                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
-                                    topatch->jmp = 1;
-                                    ret = KERN_SUCCESS;
-                                    goto end;
-                                }
-                            }
-                        }
-                    }
+                    topatch->jmp = 0;
+                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
                 }
+                else if (decodedInstructions[i+1].opcode == I_JNZ)
+                {
+                    topatch->jmp = 1;
+                }
+                else
+                {
+                    LOG_ERROR("Next instruction is not a conditional jump!");
+                    ret = KERN_FAILURE;
+                    goto end;
+                }
+                topatch->address = decodedInstructions[i+1].addr;
+                topatch->size = decodedInstructions[i+1].size;
+                memcpy(topatch->orig_bytes, topatch->address, topatch->size);
+                LOG_DEBUG("Found conditional jump at %p", (void*)topatch->address);
+                ret = KERN_SUCCESS;
+                goto end;
             }
         }
         
@@ -404,6 +402,7 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
                             LOG_DEBUG("Found test at %p", (void*)decodedInstructions[x].addr);
                             for (uint32_t z = x; z < x + 10 && z < decodedInstructionsCount; z++)
                             {
+                                /* Mountain Lion and previous ? */
                                 if (decodedInstructions[z].opcode == I_JNZ)
                                 {
                                     LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
@@ -411,6 +410,17 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_
                                     topatch->size = decodedInstructions[z].size;
                                     memcpy(topatch->orig_bytes, topatch->address, topatch->size);
                                     topatch->jmp = 1;
+                                    ret = KERN_SUCCESS;
+                                    goto end;
+                                }
+                                /* Mavericks */
+                                else if (decodedInstructions[z].opcode == I_JZ)
+                                {
+                                    LOG_DEBUG("Found conditional jump at %p", (void*)decodedInstructions[z].addr);
+                                    topatch->address = decodedInstructions[z].addr;
+                                    topatch->size = decodedInstructions[z].size;
+                                    memcpy(topatch->orig_bytes, topatch->address, topatch->size);
+                                    topatch->jmp = 0;
                                     ret = KERN_SUCCESS;
                                     goto end;
                                 }

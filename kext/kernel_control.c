@@ -233,61 +233,73 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
 	{
         case PATCH_TASK_FOR_PID:
         {
+            LOG_DEBUG("Received request to patch task_for_pid.");
             patch_task_for_pid(ENABLE);
             break;
         }
         case UNPATCH_TASK_FOR_PID:
         {
+            LOG_DEBUG("Received request to restore task_for_pid.");
             patch_task_for_pid(DISABLE);
             break;
         }
         case ANTI_PTRACE_ON:
         {
+            LOG_DEBUG("Received request to patch ptrace.");
             anti_ptrace(ENABLE);
             break;
         }
         case ANTI_PTRACE_OFF:
         {
+            LOG_DEBUG("Received request to restore ptrace.");
             anti_ptrace(DISABLE);
             break;
         }
         case ANTI_SYSCTL_ON:
         {
+            LOG_DEBUG("Received request to patch sysctl.");
             anti_sysctl(ENABLE);
             break;
         }
         case ANTI_SYSCTL_OFF:
         {
+            LOG_DEBUG("Received request to restore sysctl.");
             anti_sysctl(DISABLE);
             break;
         }
         case ANTI_KAUTH_ON:
         {
+            LOG_DEBUG("Received request to patch kauth.");
             patch_kauth(ENABLE);
             break;
         }
         case ANTI_KAUTH_OFF:
         {
+            LOG_DEBUG("Received request to restore kauth.");
             patch_kauth(DISABLE);
             break;
         }
         case PATCH_RESUME_FLAG:
         {
+            LOG_DEBUG("Received request to patch resume flag.");
             patch_resume_flag(ENABLE);
             break;
         }
         case UNPATCH_RESUME_FLAG:
         {
+            LOG_DEBUG("Received request to restore resume flag.");
             patch_resume_flag(DISABLE);
             break;
         }
         case PATCH_SINGLESTEP:
         {
+            LOG_DEBUG("Received request to patch single step.");
             patch_singlestep(ENABLE);
             break;
         }
         case UNPATCH_SINGLESTEP:
         {
+            LOG_DEBUG("Received request to restore single step.");
             patch_singlestep(DISABLE);
             break;
         }

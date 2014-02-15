@@ -99,6 +99,48 @@ patch_resume_flag(int cmd)
 /*
  * patch the task_for_pid() so we can do it for kernel pid
  *
+ * this is the structure used in the mach call:
+ struct task_for_pid_args {
+ PAD_ARG_(mach_port_name_t, target_tport);
+ PAD_ARG_(int, pid);
+ PAD_ARG_(user_addr_t, t);
+ };
+
+ * The disassembly changed in Mavericks so the old method fails with it.
+ * Best method is to find out where pid member is stored and then locate where it is tested.
+ * Mountain Lion:
+ __text:FFFFFF80005C8650 55                                      push    rbp
+ __text:FFFFFF80005C8651 48 89 E5                                mov     rbp, rsp
+ __text:FFFFFF80005C8654 41 57                                   push    r15
+ __text:FFFFFF80005C8656 41 56                                   push    r14
+ __text:FFFFFF80005C8658 41 55                                   push    r13
+ __text:FFFFFF80005C865A 41 54                                   push    r12
+ __text:FFFFFF80005C865C 53                                      push    rbx
+ __text:FFFFFF80005C865D 48 83 EC 18                             sub     rsp, 18h
+ __text:FFFFFF80005C8661 4C 8B 77 10                             mov     r14, [rdi+10h]
+ __text:FFFFFF80005C8665 8B 1F                                   mov     ebx, [rdi]
+ __text:FFFFFF80005C8667 44 8B 7F 08                             mov     r15d, [rdi+8]
+ (...)
+ __text:FFFFFF80005C86F8 45 85 FF                                test    r15d, r15d ; if (pid == 0) {
+ __text:FFFFFF80005C86FB 75 55                                   jnz     short loc_FFFFFF80005C8752
+ 
+ * Mavericks:
+ __text:FFFFFF80006385A0                 push    rbp
+ __text:FFFFFF80006385A1                 mov     rbp, rsp
+ __text:FFFFFF80006385A4                 push    r15
+ __text:FFFFFF80006385A6                 push    r14
+ __text:FFFFFF80006385A8                 push    r13
+ __text:FFFFFF80006385AA                 push    r12
+ __text:FFFFFF80006385AC                 push    rbx
+ __text:FFFFFF80006385AD                 sub     rsp, 28h
+ __text:FFFFFF80006385B1                 mov     rax, [rdi+10h]
+ __text:FFFFFF80006385B5                 mov     [rbp+var_48], rax
+ __text:FFFFFF80006385B9                 mov     ebx, [rdi]
+ __text:FFFFFF80006385BB                 mov     r12d, [rdi+8]
+ (...)
+ __text:FFFFFF8000638608                 test    r12d, r12d ; if (pid == 0) {
+ __text:FFFFFF800063860B                 jz      loc_FFFFFF800063877F
+ 
  */
 kern_return_t
 patch_task_for_pid(int cmd)
@@ -108,10 +150,9 @@ patch_task_for_pid(int cmd)
     if (patch.address == 0)
     {
         mach_vm_address_t task_for_pid_sym = solve_kernel_symbol(&g_kernel_info, "_task_for_pid");
-        mach_vm_address_t audit_arg_mach_port1_sym = solve_kernel_symbol(&g_kernel_info, "_audit_arg_mach_port1");
-        if (task_for_pid_sym && audit_arg_mach_port1_sym)
+        if (task_for_pid_sym)
         {
-            if  (find_task_for_pid(task_for_pid_sym, audit_arg_mach_port1_sym, &patch))
+            if  (find_task_for_pid(task_for_pid_sym, &patch))
             {
                 LOG_ERROR("Can't find location to patch task_for_pid()!");
                 return KERN_FAILURE;
@@ -137,7 +178,15 @@ patch_task_for_pid(int cmd)
         else if (patch.jmp == 1)
         {
             // XXX: let's trust our luck and assume it's a short jump
-            memset(patch.address, 0xEB, 1);
+            if (patch.size == 2)
+            {
+                memset(patch.address, 0xEB, 1);
+            }
+            else if (patch.size == 6)
+            {
+                memset(patch.address, 0x90, 1);
+                memset(patch.address+1, 0xE9, 1);
+            }
         }
         disable_kernel_write();
     }
@@ -179,7 +228,26 @@ patch_kauth(int cmd)
     if (cmd == ENABLE)
     {
         enable_kernel_write();
-        memset(patch.address, 0x90, patch.size);
+        /* JNZ is modified to NOP */
+        if (patch.jmp == 1)
+        {
+            memset(patch.address, 0x90, patch.size);
+        }
+        /* JZ modified to JMP */
+        else if (patch.jmp == 0)
+        {
+            /* expected near jump */
+            if (patch.size == 6)
+            {
+                /* near jump is 5 bytes, conditional six so patch first and change next to E9 */
+                memset(patch.address, 0x90, 1);
+                memset(patch.address+1, 0xE9, 1);
+            }
+            else if (patch.size == 2)
+            {
+                memset(patch.address, 0xEB, 1);
+            }
+        }
         disable_kernel_write();
     }
     else if (cmd == DISABLE)
