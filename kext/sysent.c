@@ -231,8 +231,25 @@ bruteforce_sysent(void)
     // bruteforce search for sysent in __DATA segment
     while (data_address <= data_limit)
     {
-        /* mavericks or higher */
-        if (version_major >= MAVERICKS)
+        /* mavericks */
+        if (version_major > MAVERICKS)
+        {
+            struct sysent_yosemite *table = (struct sysent_yosemite*)data_address;
+            if((void*)table != NULL &&
+               table[SYS_exit].sy_narg      == 1 &&
+               table[SYS_fork].sy_narg      == 0 &&
+               table[SYS_read].sy_narg      == 3 &&
+               table[SYS_wait4].sy_narg     == 4 &&
+               table[SYS_ptrace].sy_narg    == 4 &&
+               table[SYS_getxattr].sy_narg  == 6 &&
+               table[SYS_listxattr].sy_narg == 4 &&
+               table[SYS_recvmsg].sy_narg   == 3 )
+            {
+                LOG_DEBUG("exit() address is %p", (void*)table[SYS_exit].sy_call);
+                return (void*)data_address;
+            }
+        }
+        else if (version_major == MAVERICKS)
         {
             struct sysent_mavericks *table = (struct sysent_mavericks*)data_address;
             if((void*)table != NULL &&

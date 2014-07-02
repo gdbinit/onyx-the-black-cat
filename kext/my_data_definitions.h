@@ -99,6 +99,15 @@ struct sysent_mavericks {
     uint16_t    sy_arg_bytes;
 };
 
+/* Yosemit sysent structure is something like this - I'm not sure about that munge, but it fits. */
+struct sysent_yosemite {
+    sy_call_t   *sy_call;
+    sy_munge_t  *sy_arg_munge32;
+    int32_t     sy_return_type;
+    int16_t     sy_narg;
+    uint16_t    sy_arg_bytes;
+};
+
 #define DISABLE 0
 #define ENABLE 1
 
