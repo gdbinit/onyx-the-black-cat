@@ -251,9 +251,10 @@ onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
 int 
 onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
 {
-	int mib[4];
-	int result;
-	char processname[MAXCOMLEN+1];
+	int mib[4] = {0};
+	int result = 0;
+    int err = 0;
+	char processname[MAXCOMLEN+1] = {0};
 	// call the real_sysctl function and hold the result so we can use it to return from our hijacked sysctl
 	result = real_sysctl(p,uap,retval);
 	/*
@@ -266,10 +267,17 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
     // int copyin(const void *uaddr, void *kaddr, size_t len);
     // copyin() Copies len bytes of data from the user-space address uaddr to the kernel-space address kaddr.
     // copy structure from userspace to kernel space so we can verify if it's what we are looking for
-    copyin(uap->name, &mib, sizeof(mib));
-    // if it's a anti-debug call
-    //printf("[onyx-the-black-cat] DEBUG: sysctl parameters mib[0]: %x mib[1]: %x mib[2]: %x\n", mib[0], mib[1], mib[2]);
-    if (mib[0]==CTL_KERN && mib[1]==KERN_PROC && mib[2]==KERN_PROC_PID)
+    err = copyin(uap->name, &mib, sizeof(mib));
+    if (err != 0)
+    {
+        LOG_ERROR("Copyin failed: %d.", err);
+        return result;
+    }
+    
+    // if it's an anti-debug call
+    if (mib[0] == CTL_KERN &&
+        mib[1] == KERN_PROC &&
+        mib[2] == KERN_PROC_PID)
     {
         // copy process name
         pid_t pid = proc_pid(p);
@@ -277,9 +285,14 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
         // is it a 64bits process?
         if (proc_is64bit(p) == 1)
         {
-            struct user64_kinfo_proc kpr;
+            struct user64_kinfo_proc kpr = {0};
             // then copy the result from the destination buffer ( *oldp from sysctl call) to kernel space so we can edit
-            copyin(uap->old, &kpr, sizeof(kpr));
+            err = copyin(uap->old, &kpr, sizeof(kpr));
+            if (err != 0 )
+            {
+                LOG_ERROR("Copyin failed: %d.", err);
+                return result;
+            }
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
                 // we can display the PID of the calling program, which can be useful
@@ -291,7 +304,12 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
                 // copy back to user space the modified structure
                 // int copyout(const void *kaddr, void *uaddr, size_t len);
                 // copyout() Copies len bytes of data from the kernel-space address kaddr to the user-space address uaddr.
-                copyout(&kpr, uap->old,sizeof(kpr));
+                err = copyout(&kpr, uap->old,sizeof(kpr));
+                if (err != 0)
+                {
+                    LOG_ERROR("Copyout failed: %d.", err);
+                    return result;
+                }
                 /* sysctl()
                  If the old value is not desired, oldp and
                  oldlenp should be set to NULL.
@@ -299,17 +317,27 @@ onyx_sysctl(struct proc *p, struct __sysctl_args *uap, int *retval)
             }
         }
         // 32 bits processes
+        /* Note: since we only support 64 bits kernels we must use the LP64 version of kinfo_proc */
         else
         {
-            struct kinfo_proc kpr;
-            copyin(uap->old, &kpr, sizeof(kpr));
+            struct user32_kinfo_proc kpr = {0};
+            err = copyin(uap->old, &kpr, sizeof(kpr));
+            if (err != 0)
+            {
+                LOG_ERROR("Copyin failed: %d.", err);
+                return result;
+            }
             if ( (kpr.kp_proc.p_flag & P_TRACED) != 0 )
             {
                 LOG_INFO("Detected sysctl anti-debug trick requested by 32 bits process with PID %d (%s)! Patching...", pid, processname);
                 kpr.kp_proc.p_flag = kpr.kp_proc.p_flag & ~P_TRACED;
-                copyout(&kpr, uap->old,sizeof(kpr));
+                err = copyout(&kpr, uap->old,sizeof(kpr));
+                if (err != 0)
+                {
+                    LOG_ERROR("Copyout failed: %d.", err);
+                    return result;
+                }
             }
-            
         }
     }
 	// and return from our hijacked function
