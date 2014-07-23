@@ -115,7 +115,9 @@ remove_kern_control(void)
     switch (error)
     {
         case 0:
+        {
             return KERN_SUCCESS;
+        }
         case EINVAL:
         {
             LOG_ERROR("The kernel control reference is invalid.");
@@ -142,10 +144,15 @@ queue_userland_data(pid_t pid)
 {
     errno_t error = 0;
     
-    if (g_client_ctl_ref == NULL) return KERN_FAILURE;
-    
+    if (g_client_ctl_ref == NULL)
+    {
+        return KERN_FAILURE;
+    }
     error = ctl_enqueuedata(g_client_ctl_ref, g_client_unit, &pid, sizeof(pid_t), 0);
-    if (error) LOG_ERROR("ctl_enqueuedata failed with error: %d", error);
+    if (error)
+    {
+        LOG_ERROR("ctl_enqueuedata failed with error: %d", error);
+    }
     return error;
 }
 
@@ -159,7 +166,10 @@ static int
 ctl_connect(kern_ctl_ref ctl_ref, struct sockaddr_ctl *sac, void **unitinfo)
 {
     // we only accept a single client
-    if (g_max_clients > 0) return EBUSY;
+    if (g_max_clients > 0)
+    {
+        return EBUSY;
+    }
     g_max_clients++;
     // store the unit id and ctl_ref of the client that connected
     // we will need these to queue data to userland
@@ -304,8 +314,10 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
             break;
         }
         default:
+        {
             error = ENOTSUP;
             break;
+        }
     }
     return error;
 }

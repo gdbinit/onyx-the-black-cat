@@ -225,7 +225,7 @@ ustack();
 int 
 onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
 {
-	char processname[MAXCOMLEN+1];
+	char processname[MAXCOMLEN+1] = {0};
     // verify if it's a PT_DENY_ATTACH request and fix for all processes that call it
     if (uap->req == PT_DENY_ATTACH)
     {

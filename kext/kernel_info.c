@@ -137,7 +137,10 @@ failure:
 kern_return_t
 cleanup_kernel_info(struct kernel_info *kinfo)
 {
-    if (kinfo->linkedit_buf != NULL) _FREE(kinfo->linkedit_buf, M_TEMP);
+    if (kinfo->linkedit_buf != NULL)
+    {
+        _FREE(kinfo->linkedit_buf, M_TEMP);
+    }
     return KERN_SUCCESS;
 }
 
@@ -147,7 +150,10 @@ cleanup_kernel_info(struct kernel_info *kinfo)
 mach_vm_address_t
 solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
 {
-    if (kinfo == NULL || kinfo->linkedit_buf == NULL) return 0;
+    if (kinfo == NULL || kinfo->linkedit_buf == NULL)
+    {
+        return 0;
+    }
 
     // symbols and strings offsets into LINKEDIT
     // we just read the __LINKEDIT but fileoff values are relative to the full /mach_kernel
@@ -207,7 +213,10 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
 {
     struct nlist_64 *nlist = NULL;
     
-    if (kinfo == NULL || kinfo->linkedit_buf == NULL) return 0;
+    if (kinfo == NULL || kinfo->linkedit_buf == NULL)
+    {
+        return 0;
+    }
 
     mach_vm_address_t symbol_off = kinfo->symboltable_fileoff - kinfo->linkedit_fileoff;
     mach_vm_address_t string_off = kinfo->stringtable_fileoff - kinfo->linkedit_fileoff;
@@ -309,13 +318,25 @@ get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
 {
     int error = 0;
     uio_t uio = uio_create(1, kinfo->linkedit_fileoff, UIO_SYSSPACE, UIO_READ);
-    if (uio == NULL) return KERN_FAILURE;
+    if (uio == NULL)
+    {
+        return KERN_FAILURE;
+    }
     error = uio_addiov(uio, CAST_USER_ADDR_T(kinfo->linkedit_buf), kinfo->linkedit_size);
-    if (error) return error;
+    if (error)
+    {
+        return error;
+    }
     error = VNOP_READ(kernel_vnode, uio, 0, NULL);
     
-    if (error) return error;
-    else if (uio_resid(uio)) return EINVAL;
+    if (error)
+    {
+        return error;
+    }
+    else if (uio_resid(uio))
+    {
+        return EINVAL;
+    }
     
     return KERN_SUCCESS;
 }

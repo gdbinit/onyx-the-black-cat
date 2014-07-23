@@ -55,8 +55,14 @@ disable_wp(void)
 	// and write it back
 	set_cr0(cr0);
     // verify if we were successful
-    if ((get_cr0() & CR0_WP) == 0) return KERN_SUCCESS;
-    else return KERN_FAILURE;
+    if ((get_cr0() & CR0_WP) == 0)
+    {
+        return KERN_SUCCESS;
+    }
+    else
+    {
+        return KERN_FAILURE;
+    }
 }
 
 /*
@@ -73,8 +79,14 @@ enable_wp(void)
 	// and write it back
 	set_cr0(cr0);
     // verify if we were successful
-    if ((get_cr0() & CR0_WP) != 0) return KERN_SUCCESS;
-    else return KERN_FAILURE;
+    if ((get_cr0() & CR0_WP) != 0)
+    {
+        return KERN_SUCCESS;
+    }
+    else
+    {
+        return KERN_FAILURE;
+    }
 }
 
 /*
@@ -87,8 +99,14 @@ verify_wp(void)
 {
     uintptr_t cr0;
     cr0 = get_cr0();
-    if (cr0 & CR0_WP) return 0;
-    else return 1;
+    if (cr0 & CR0_WP)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 void

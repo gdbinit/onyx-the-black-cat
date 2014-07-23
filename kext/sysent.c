@@ -139,8 +139,8 @@ mach_vm_address_t
 calculate_int80address(const mach_vm_address_t idt_address)
 {
   	// find the address of interrupt 0x80 - EXCEP64_SPC_USR(0x80,hi64_unix_scall) @ osfmk/i386/idt64.s
-	struct descriptor_idt *int80_descriptor;
-	mach_vm_address_t int80_address;
+	struct descriptor_idt *int80_descriptor = NULL;
+	mach_vm_address_t int80_address = 0;
     // we need to compute the address, it's not direct
     // extract the stub address
 #if __LP64__
@@ -197,7 +197,10 @@ find_kernel_base(const mach_vm_address_t int80_address)
                 return (mach_vm_address_t)temp_address;
             }
         }
-        if (temp_address - 1 > temp_address) break;
+        if (temp_address - 1 > temp_address)
+        {
+            break;
+        }
         temp_address--;
     }
 #endif
