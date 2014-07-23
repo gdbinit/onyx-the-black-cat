@@ -99,7 +99,7 @@
         self.kSocket = -1;
         NSLog(@"[ERROR] Connect failed: %s!\n", strerror(errno));
         return -1;
-    }
+    }    
     return 0;
 }
 

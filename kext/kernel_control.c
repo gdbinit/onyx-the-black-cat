@@ -82,7 +82,7 @@ static struct kern_ctl_reg g_ctl_reg = {
 	ctl_disconnect,		  /* called when a connection becomes disconnected */
 	NULL,				  /* ctl_send_func - handles data sent from the client to kernel control - not implemented */
 	ctl_set,			  /* called when the user process makes the setsockopt call */
-	ctl_get			 	  /* called when the user process makes the getsockopt call */
+	NULL			 	  /* called when the user process makes the getsockopt call */
 };
 
 #pragma mark The start and stop functions
@@ -125,35 +125,12 @@ remove_kern_control(void)
         }
         case EBUSY:
         {
-            LOG_ERROR("The kernel control has clients still attached.");
+            LOG_ERROR("The kernel control still has clients attached. Please disconnect them first!");
             return KERN_FAILURE;
         }
         default:
             return KERN_FAILURE;
     }
-}
-
-#pragma mark Queue function(s)
-
-/*
- * get data ready for userland to grab
- * XXX: not being used for anything and only enqueuing the PID
- */
-kern_return_t
-queue_userland_data(pid_t pid)
-{
-    errno_t error = 0;
-    
-    if (g_client_ctl_ref == NULL)
-    {
-        return KERN_FAILURE;
-    }
-    error = ctl_enqueuedata(g_client_ctl_ref, g_client_unit, &pid, sizeof(pid_t), 0);
-    if (error)
-    {
-        LOG_ERROR("ctl_enqueuedata failed with error: %d", error);
-    }
-    return error;
 }
 
 #pragma mark Kernel Control handler functions
@@ -190,33 +167,6 @@ ctl_disconnect(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo)
     g_client_unit = 0;
     g_client_ctl_ref = NULL;
     return 0;
-}
-
-/*
- * send data from kernel to userland
- * XXX: not used here
- */
-static int
-ctl_get(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *data, size_t *len)
-{
-    int		error = 0;
-	size_t  valsize;
-	void    *buf = NULL;
-	switch (opt)
-    {
-        case 0:
-            valsize = 0;
-            break;
-        default:
-            error = ENOTSUP;
-            break;
-    }
-    if (error == 0)
-    {
-        *len = valsize;
-        if (data != NULL) bcopy(buf, data, valsize);
-    }
-    return error;
 }
 
 /*

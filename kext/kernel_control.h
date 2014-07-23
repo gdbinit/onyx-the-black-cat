@@ -44,6 +44,5 @@
 
 kern_return_t install_kern_control(void);
 kern_return_t remove_kern_control(void);
-kern_return_t queue_userland_data(pid_t pid);
 
 #endif
