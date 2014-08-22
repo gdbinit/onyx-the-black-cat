@@ -45,6 +45,7 @@
 void *g_sysent_addr;
 struct sysent *g_sysent;
 struct sysent_mavericks *g_sysent_mav;
+struct sysent_yosemite *g_sysent_yos;
 
 /* to distinguish between Mavericks and others because of different sysent structure */
 extern const int  version_major;
@@ -86,9 +87,13 @@ find_sysent(void)
         LOG_ERROR("Cannot find sysent table");
         return KERN_FAILURE;
     }
-    if (version_major >= MAVERICKS)
+    else if (version_major == MAVERICKS)
     {
         g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
+    }
+    else if (version_major > MAVERICKS)
+    {
+        g_sysent_yos = (struct sysent_yosemite *)g_sysent_addr;
     }
     else
     {
@@ -104,7 +109,19 @@ kern_return_t
 cleanup_sysent(void)
 {
     enable_kernel_write();
-    if (version_major >= MAVERICKS)
+    if (version_major > MAVERICKS)
+    {
+        if (real_ptrace != NULL && g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        {
+            g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        }
+        if (real_sysctl != NULL && g_sysent_yos[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        {
+            g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        }
+
+    }
+    else if (version_major == MAVERICKS)
     {
         if (real_ptrace != NULL && g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
@@ -114,7 +131,7 @@ cleanup_sysent(void)
         {
             g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
         }
-        
+
     }
     else
     {
