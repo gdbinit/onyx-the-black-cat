@@ -48,6 +48,7 @@
 #include "cpu_protections.h"
 
 /* ptrace request */
+#define PT_ATTACH               10
 #define PT_DENY_ATTACH          31
 #define P_LNOATTACH     0x00001000
 #define P_LTRACED       0x00000400
@@ -225,15 +226,21 @@ ustack();
 int 
 onyx_ptrace(struct proc *p, struct ptrace_args *uap, int *retval)
 {
+    /* retrieve pid using exported functions so we don't need definition of struct proc */
+    pid_t pid = proc_pid(p);
 	char processname[MAXCOMLEN+1] = {0};
     // verify if it's a PT_DENY_ATTACH request and fix for all processes that call it
     if (uap->req == PT_DENY_ATTACH)
     {
-        /* retrieve pid using exported functions so we don't need definition of struct proc */
-        pid_t pid = proc_pid(p);
         proc_name(pid, processname, sizeof(processname));
         LOG_INFO("Blocked PT_DENY_ATTACH/P_LNOATTACH in PID %d (%s)", pid, processname);
         return 0;
+    }
+    // for the extra tricky ones : simulate exact behavior
+    else if (uap->req == PT_ATTACH && uap->pid == pid)
+    {
+        proc_signal(pid, SIGSEGV);
+        return 22;
     }
     // else it's business as usual, we are not interested in messing with other requests
     else
