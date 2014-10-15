@@ -75,6 +75,8 @@ int onyx_sysctl(struct proc *, struct __sysctl_args *, int *);
 kern_return_t
 anti_ptrace(int cmd)
 {
+    kern_return_t rc = KERN_SUCCESS;
+    
     LOG_DEBUG("Executing anti_ptrace!");
     // Mountain Lion moved sysent[] to read-only section :-)
     enable_kernel_write();
@@ -90,7 +92,8 @@ anti_ptrace(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original ptrace() function!");
-                return KERN_FAILURE;
+                rc = KERN_FAILURE;
+                goto done;
             }
         }
         else
@@ -102,7 +105,8 @@ anti_ptrace(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original ptrace() function!");
-                return KERN_FAILURE;
+                rc = KERN_FAILURE;
+                goto done;
             }
         }
     }
@@ -121,13 +125,17 @@ anti_ptrace(int cmd)
             g_sysent[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
         }
     }
+
+done:
     disable_kernel_write();
-    return KERN_SUCCESS;
+    return rc;
 }
 
 kern_return_t
 anti_sysctl(int cmd)
 {
+    kern_return_t rc = KERN_SUCCESS;
+    
     enable_kernel_write();
     if (cmd == DISABLE)
     {
@@ -140,7 +148,8 @@ anti_sysctl(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original sysctl() function!");
-                return KERN_FAILURE;
+                rc = KERN_FAILURE;
+                goto done;
             }
         }
         else
@@ -152,7 +161,8 @@ anti_sysctl(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original sysctl() function!");
-                return KERN_FAILURE;
+                rc = KERN_FAILURE;
+                goto done;
             }
         }
     }
@@ -169,8 +179,10 @@ anti_sysctl(int cmd)
             g_sysent[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
         }
     }
+    
+done:
     disable_kernel_write();
-    return KERN_SUCCESS;
+    return rc;
 }
 
 #pragma mark The hook replacement functions
