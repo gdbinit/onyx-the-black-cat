@@ -1,0 +1,13 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+cd /tmp
+svn checkout http://distorm.googlecode.com/svn/trunk/ distorm
+cd distorm
+
+cp -r src "$DIR/kext/distorm"
+cp -r include "$DIR/kext/include"
+cp include/* "$DIR/kext"
+
+cd ..
+rm -rf distorm
