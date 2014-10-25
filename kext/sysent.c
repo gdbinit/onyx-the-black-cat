@@ -45,6 +45,7 @@
 void *g_sysent_addr;
 struct sysent *g_sysent;
 struct sysent_mavericks *g_sysent_mav;
+struct sysent_yosemite *g_sysent_yos;
 
 /* to distinguish between Mavericks and others because of different sysent structure */
 extern const int  version_major;
@@ -86,9 +87,13 @@ find_sysent(void)
         LOG_ERROR("Cannot find sysent table");
         return KERN_FAILURE;
     }
-    if (version_major >= MAVERICKS)
+    else if (version_major == MAVERICKS)
     {
         g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
+    }
+    else if (version_major > MAVERICKS)
+    {
+        g_sysent_yos = (struct sysent_yosemite *)g_sysent_addr;
     }
     else
     {
@@ -104,7 +109,19 @@ kern_return_t
 cleanup_sysent(void)
 {
     enable_kernel_write();
-    if (version_major >= MAVERICKS)
+    if (version_major > MAVERICKS)
+    {
+        if (real_ptrace != NULL && g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        {
+            g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        }
+        if (real_sysctl != NULL && g_sysent_yos[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        {
+            g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        }
+
+    }
+    else if (version_major == MAVERICKS)
     {
         if (real_ptrace != NULL && g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
@@ -114,7 +131,7 @@ cleanup_sysent(void)
         {
             g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
         }
-        
+
     }
     else
     {
@@ -234,8 +251,25 @@ bruteforce_sysent(void)
     // bruteforce search for sysent in __DATA segment
     while (data_address <= data_limit)
     {
-        /* mavericks or higher */
-        if (version_major >= MAVERICKS)
+        /* mavericks */
+        if (version_major > MAVERICKS)
+        {
+            struct sysent_yosemite *table = (struct sysent_yosemite*)data_address;
+            if((void*)table != NULL &&
+               table[SYS_exit].sy_narg      == 1 &&
+               table[SYS_fork].sy_narg      == 0 &&
+               table[SYS_read].sy_narg      == 3 &&
+               table[SYS_wait4].sy_narg     == 4 &&
+               table[SYS_ptrace].sy_narg    == 4 &&
+               table[SYS_getxattr].sy_narg  == 6 &&
+               table[SYS_listxattr].sy_narg == 4 &&
+               table[SYS_recvmsg].sy_narg   == 3 )
+            {
+                LOG_DEBUG("exit() address is %p", (void*)table[SYS_exit].sy_call);
+                return (void*)data_address;
+            }
+        }
+        else if (version_major == MAVERICKS)
         {
             struct sysent_mavericks *table = (struct sysent_mavericks*)data_address;
             if((void*)table != NULL &&

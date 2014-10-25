@@ -62,6 +62,7 @@
 extern void *g_sysent_addr;
 extern struct sysent *g_sysent;
 extern struct sysent_mavericks *g_sysent_mav;
+extern struct sysent_yosemite *g_sysent_yos;
 extern const int  version_major;
 
 // prototypes
@@ -81,7 +82,19 @@ anti_ptrace(int cmd)
     if (cmd == DISABLE)
     {
         // restore the pointer to the original function
-        if (version_major >= MAVERICKS)
+        if (version_major > MAVERICKS)
+        {
+            if (real_ptrace != NULL)
+            {
+                g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original ptrace() function!");
+                return KERN_FAILURE;
+            }
+        }
+        if (version_major == MAVERICKS)
         {
             if (real_ptrace != NULL)
             {
@@ -108,7 +121,14 @@ anti_ptrace(int cmd)
     }
     else if (cmd == ENABLE)
     {
-        if (version_major >= MAVERICKS)
+        if (version_major > MAVERICKS)
+        {
+            // save address of the real function
+            real_ptrace = (void*)g_sysent_yos[SYS_ptrace].sy_call;
+            // hook the syscall by replacing the pointer in sysent
+            g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
+        }
+        else if (version_major == MAVERICKS)
         {
             // save address of the real function
             real_ptrace = (void*)g_sysent_mav[SYS_ptrace].sy_call;
@@ -131,7 +151,19 @@ anti_sysctl(int cmd)
     enable_kernel_write();
     if (cmd == DISABLE)
     {
-        if (version_major >= MAVERICKS)
+        if (version_major > MAVERICKS)
+        {
+            if (real_sysctl != NULL)
+            {
+                g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+            }
+            else
+            {
+                LOG_ERROR("No pointer available for original sysctl() function!");
+                return KERN_FAILURE;
+            }
+        }
+        else if (version_major == MAVERICKS)
         {
             if (real_sysctl != NULL)
             {
@@ -158,7 +190,12 @@ anti_sysctl(int cmd)
     }
     else if (cmd == ENABLE)
     {
-        if (version_major >= MAVERICKS)
+        if (version_major > MAVERICKS)
+        {
+            real_sysctl = (void*)g_sysent_yos[SYS___sysctl].sy_call;
+            g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;
+        }
+        else if (version_major == MAVERICKS)
         {
             real_sysctl = (void*)g_sysent_mav[SYS___sysctl].sy_call;
             g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;

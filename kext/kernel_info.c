@@ -55,13 +55,14 @@
 #include "idt.h"
 #include "sysent.h"
 
-#define MACH_KERNEL         "/mach_kernel"      // location of kernel in filesystem
+#define MACH_KERNEL         "/mach_kernel"      // location of kernel in filesystem - pre yosemite
+#define MACH_KERNEL_NEW     "/System/Library/Kernels/kernel" // New location of kernel
 #define HEADER_SIZE         PAGE_SIZE_64*2      // amount of mach-o header to read
 
 // local prototypes
-static kern_return_t get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *kinfo);
+static kern_return_t get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo);
 static kern_return_t process_kernel_mach_header(void *kernel_header, struct kernel_info *kinfo);
-static kern_return_t get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo);
+static kern_return_t get_kernel_linkedit(vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo);
 static void get_running_text_address(struct kernel_info *kinfo);
 static kern_return_t get_and_process_kernel_image(vnode_t kernel_vnode, struct kernel_info *kinfo);
 
@@ -78,9 +79,14 @@ init_kernel_info(struct kernel_info *kinfo)
     kern_return_t error = 0;
     // lookup vnode for /mach_kernel
     vnode_t kernel_vnode = NULLVP;
-    error = vnode_lookup(MACH_KERNEL, 0, &kernel_vnode, NULL);
-    if (error)
-    {
+    vfs_context_t ctxt = vfs_context_create(NULL);
+    error = vnode_lookup(MACH_KERNEL, 0, &kernel_vnode, ctxt);
+    if (error) {
+        LOG_INFO("Try New File " MACH_KERNEL_NEW);
+        error = vnode_lookup(MACH_KERNEL_NEW, 0, &kernel_vnode, ctxt);
+    }
+    if (error) {
+        vfs_context_rele(ctxt);
         LOG_ERROR("Vnode lookup on mach_kernel failed!");
         return KERN_FAILURE;
     }
@@ -89,10 +95,11 @@ init_kernel_info(struct kernel_info *kinfo)
     if (kernel_header == NULL)
     {
         LOG_ERROR("Can't allocate memory.");
+        vfs_context_rele(ctxt);
         return KERN_FAILURE;
     }
     // read and process kernel header from filesystem
-    error = get_kernel_mach_header(kernel_header, kernel_vnode, kinfo);
+    error = get_kernel_mach_header(kernel_header, kernel_vnode, ctxt, kinfo);
     if (error) goto failure;
     error = process_kernel_mach_header(kernel_header, kinfo);
     if (error) goto failure;
@@ -110,10 +117,11 @@ init_kernel_info(struct kernel_info *kinfo)
     {
         LOG_ERROR("Could not allocate enough memory for __LINKEDIT segment");
         _FREE(kernel_header, M_TEMP);
+        vfs_context_rele(ctxt);
         return KERN_FAILURE;
     }
     // read linkedit from filesystem
-    error = get_kernel_linkedit(kernel_vnode, kinfo);
+    error = get_kernel_linkedit(kernel_vnode, ctxt, kinfo);
     if (error) goto failure;
 
 success:
@@ -121,12 +129,14 @@ success:
     // drop the iocount due to vnode_lookup()
     // we must do this else machine will block on shutdown/reboot
     vnode_put(kernel_vnode);
+    vfs_context_rele(ctxt);
     return KERN_SUCCESS;
 failure:
     LOG_ERROR("Something failed at %s", __FUNCTION__);
     if (kinfo->linkedit_buf != NULL) _FREE(kinfo->linkedit_buf, M_TEMP);
     _FREE(kernel_header, M_TEMP);
     vnode_put(kernel_vnode);
+    vfs_context_rele(ctxt);
     return KERN_FAILURE;
 }
 
@@ -245,7 +255,7 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
  * version that uses KPI VFS functions and a ripped uio_createwithbuffer() from XNU
  */
 static kern_return_t
-get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *kinfo)
+get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo)
 {
     int error = 0;
     uio_t uio = uio_create(1, 0, UIO_SYSSPACE, UIO_READ);
@@ -262,7 +272,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         return error;
     }
     // read kernel vnode into the buffer
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+    error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
     
     if (error)
     {
@@ -298,7 +308,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         // read again
         uio = uio_create(1, file_offset, UIO_SYSSPACE, UIO_READ);
         error = uio_addiov(uio, CAST_USER_ADDR_T(buffer), HEADER_SIZE);
-        error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+        error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
         kinfo->fat_offset = file_offset;
     }
     else
@@ -314,7 +324,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
  * we keep this buffer until we don't need to solve symbols anymore
  */
 static kern_return_t
-get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
+get_kernel_linkedit(vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo)
 {
     int error = 0;
     uio_t uio = uio_create(1, kinfo->linkedit_fileoff, UIO_SYSSPACE, UIO_READ);
@@ -323,11 +333,8 @@ get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
         return KERN_FAILURE;
     }
     error = uio_addiov(uio, CAST_USER_ADDR_T(kinfo->linkedit_buf), kinfo->linkedit_size);
-    if (error)
-    {
-        return error;
-    }
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+    if (error) return error;
+    error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
     
     if (error)
     {
