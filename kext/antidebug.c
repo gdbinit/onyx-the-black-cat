@@ -82,7 +82,7 @@ anti_ptrace(int cmd)
     if (cmd == DISABLE)
     {
         // restore the pointer to the original function
-        if (version_major > MAVERICKS)
+        if (version_major >= YOSEMITE)
         {
             if (real_ptrace != NULL)
             {
@@ -121,7 +121,7 @@ anti_ptrace(int cmd)
     }
     else if (cmd == ENABLE)
     {
-        if (version_major > MAVERICKS)
+        if (version_major >= YOSEMITE)
         {
             // save address of the real function
             real_ptrace = (void*)g_sysent_yos[SYS_ptrace].sy_call;
@@ -151,7 +151,7 @@ anti_sysctl(int cmd)
     enable_kernel_write();
     if (cmd == DISABLE)
     {
-        if (version_major > MAVERICKS)
+        if (version_major >= YOSEMITE)
         {
             if (real_sysctl != NULL)
             {
@@ -190,7 +190,7 @@ anti_sysctl(int cmd)
     }
     else if (cmd == ENABLE)
     {
-        if (version_major > MAVERICKS)
+        if (version_major >= YOSEMITE)
         {
             real_sysctl = (void*)g_sysent_yos[SYS___sysctl].sy_call;
             g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)onyx_sysctl;

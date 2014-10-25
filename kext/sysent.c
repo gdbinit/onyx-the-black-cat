@@ -91,7 +91,7 @@ find_sysent(void)
     {
         g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
     }
-    else if (version_major > MAVERICKS)
+    else if (version_major >= YOSEMITE)
     {
         g_sysent_yos = (struct sysent_yosemite *)g_sysent_addr;
     }
@@ -109,7 +109,7 @@ kern_return_t
 cleanup_sysent(void)
 {
     enable_kernel_write();
-    if (version_major > MAVERICKS)
+    if (version_major >= YOSEMITE)
     {
         if (real_ptrace != NULL && g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
@@ -252,7 +252,7 @@ bruteforce_sysent(void)
     while (data_address <= data_limit)
     {
         /* mavericks */
-        if (version_major > MAVERICKS)
+        if (version_major >= YOSEMITE)
         {
             struct sysent_yosemite *table = (struct sysent_yosemite*)data_address;
             if((void*)table != NULL &&

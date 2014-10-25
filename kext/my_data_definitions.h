@@ -112,6 +112,7 @@ struct sysent_yosemite {
 #define ENABLE 1
 
 #define MAVERICKS   13
+#define YOSEMITE    14
 
 #if DEBUG
 #define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ## __VA_ARGS__)
