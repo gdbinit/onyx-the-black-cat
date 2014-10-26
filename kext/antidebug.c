@@ -94,7 +94,7 @@ anti_ptrace(int cmd)
                 return KERN_FAILURE;
             }
         }
-        if (version_major == MAVERICKS)
+        else if (version_major == MAVERICKS)
         {
             if (real_ptrace != NULL)
             {
@@ -123,10 +123,10 @@ anti_ptrace(int cmd)
     {
         if (version_major >= YOSEMITE)
         {
-            // save address of the real function
-            real_ptrace = (void*)g_sysent_yos[SYS_ptrace].sy_call;
+			// save address of the real function
+			real_ptrace = (void*)g_sysent_yos[SYS_ptrace].sy_call;
             // hook the syscall by replacing the pointer in sysent
-            g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
+            g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)onyx_ptrace;
         }
         else if (version_major == MAVERICKS)
         {
