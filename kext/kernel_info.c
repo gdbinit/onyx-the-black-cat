@@ -55,13 +55,20 @@
 #include "idt.h"
 #include "sysent.h"
 
-#define MACH_KERNEL         "/mach_kernel"      // location of kernel in filesystem
+static char *kernel_paths[] = {
+	"/mach_kernel",
+	"/System/Library/Kernels/kernel",
+	"/System/Library/Kernels/kernel.development",
+	"/System/Library/Kernels/kernel.debug"
+};
+
 #define HEADER_SIZE         PAGE_SIZE_64*2      // amount of mach-o header to read
 
 // local prototypes
-static kern_return_t get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *kinfo);
+static kern_return_t get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo);
+static int is_current_kernel(void *kernel_header);
 static kern_return_t process_kernel_mach_header(void *kernel_header, struct kernel_info *kinfo);
-static kern_return_t get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo);
+static kern_return_t get_kernel_linkedit(vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo);
 static void get_running_text_address(struct kernel_info *kinfo);
 static kern_return_t get_and_process_kernel_image(vnode_t kernel_vnode, struct kernel_info *kinfo);
 
@@ -77,23 +84,45 @@ init_kernel_info(struct kernel_info *kinfo)
 {
     kern_return_t error = 0;
     // lookup vnode for /mach_kernel
-    vnode_t kernel_vnode = NULLVP;
-    error = vnode_lookup(MACH_KERNEL, 0, &kernel_vnode, NULL);
-    if (error)
-    {
-        LOG_ERROR("Vnode lookup on mach_kernel failed!");
-        return KERN_FAILURE;
-    }
+	
+	void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
+	if (kernel_header == NULL)
+	{
+		LOG_ERROR("Can't allocate memory.");
+		return KERN_FAILURE;
+	}
+	
+	vnode_t kernel_vnode;
+	vfs_context_t ctxt;
+	
+	int found_kernel = 0;
+	for(int i = 0; i < sizeof(kernel_paths) / sizeof(*kernel_paths); i++) {
+		kernel_vnode = NULLVP;
+		ctxt = vfs_context_create(NULL);
+		
+		error = vnode_lookup(kernel_paths[i], 0, &kernel_vnode, ctxt);
+		if(!error) {
+			error = get_kernel_mach_header(kernel_header, kernel_vnode, ctxt, kinfo);
+			if(!error) {
+				if(!is_current_kernel(kernel_header)) {
+					vnode_put(kernel_vnode);
+				} else {
+					LOG_DEBUG("Found current kernel path: %s", kernel_paths[i]);
+					found_kernel = 1;
+					break;
+				}
+			}
+		}
+		
+		vfs_context_rele(ctxt);
+	}
+	
+	if(!found_kernel) {
+		_FREE(kernel_header, M_TEMP);
+		LOG_ERROR("Couldn't find kernel");
+		return KERN_FAILURE;
+	}
 
-    void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
-    if (kernel_header == NULL)
-    {
-        LOG_ERROR("Can't allocate memory.");
-        return KERN_FAILURE;
-    }
-    // read and process kernel header from filesystem
-    error = get_kernel_mach_header(kernel_header, kernel_vnode, kinfo);
-    if (error) goto failure;
     error = process_kernel_mach_header(kernel_header, kinfo);
     if (error) goto failure;
 
@@ -110,10 +139,11 @@ init_kernel_info(struct kernel_info *kinfo)
     {
         LOG_ERROR("Could not allocate enough memory for __LINKEDIT segment");
         _FREE(kernel_header, M_TEMP);
+        vfs_context_rele(ctxt);
         return KERN_FAILURE;
     }
     // read linkedit from filesystem
-    error = get_kernel_linkedit(kernel_vnode, kinfo);
+    error = get_kernel_linkedit(kernel_vnode, ctxt, kinfo);
     if (error) goto failure;
 
 success:
@@ -121,12 +151,14 @@ success:
     // drop the iocount due to vnode_lookup()
     // we must do this else machine will block on shutdown/reboot
     vnode_put(kernel_vnode);
+    vfs_context_rele(ctxt);
     return KERN_SUCCESS;
 failure:
     LOG_ERROR("Something failed at %s", __FUNCTION__);
     if (kinfo->linkedit_buf != NULL) _FREE(kinfo->linkedit_buf, M_TEMP);
     _FREE(kernel_header, M_TEMP);
     vnode_put(kernel_vnode);
+    vfs_context_rele(ctxt);
     return KERN_FAILURE;
 }
 
@@ -245,7 +277,7 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
  * version that uses KPI VFS functions and a ripped uio_createwithbuffer() from XNU
  */
 static kern_return_t
-get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *kinfo)
+get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo)
 {
     int error = 0;
     uio_t uio = uio_create(1, 0, UIO_SYSSPACE, UIO_READ);
@@ -262,7 +294,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         return error;
     }
     // read kernel vnode into the buffer
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+    error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
     
     if (error)
     {
@@ -298,7 +330,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         // read again
         uio = uio_create(1, file_offset, UIO_SYSSPACE, UIO_READ);
         error = uio_addiov(uio, CAST_USER_ADDR_T(buffer), HEADER_SIZE);
-        error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+        error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
         kinfo->fat_offset = file_offset;
     }
     else
@@ -314,7 +346,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
  * we keep this buffer until we don't need to solve symbols anymore
  */
 static kern_return_t
-get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
+get_kernel_linkedit(vnode_t kernel_vnode, vfs_context_t ctxt, struct kernel_info *kinfo)
 {
     int error = 0;
     uio_t uio = uio_create(1, kinfo->linkedit_fileoff, UIO_SYSSPACE, UIO_READ);
@@ -323,11 +355,8 @@ get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
         return KERN_FAILURE;
     }
     error = uio_addiov(uio, CAST_USER_ADDR_T(kinfo->linkedit_buf), kinfo->linkedit_size);
-    if (error)
-    {
-        return error;
-    }
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+    if (error) return error;
+    error = VNOP_READ(kernel_vnode, uio, 0, ctxt);
     
     if (error)
     {
@@ -339,6 +368,51 @@ get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
     }
     
     return KERN_SUCCESS;
+}
+
+static uint64_t *
+get_uuid(void *mach_header) {
+	struct mach_header *mh = (struct mach_header*)mach_header;
+	int header_size = 0;
+	if (mh->magic == MH_MAGIC) header_size = sizeof(struct mach_header);
+	else if (mh->magic == MH_MAGIC_64) header_size = sizeof(struct mach_header_64);
+	
+	struct load_command *load_cmd = NULL;
+	char *load_cmd_addr = (char*)mach_header + header_size;
+	for (uint32_t i = 0; i < mh->ncmds; i++)
+	{
+		load_cmd = (struct load_command*)load_cmd_addr;
+		if (load_cmd->cmd == LC_UUID)
+		{
+			return (uint64_t *)((struct uuid_command *)load_cmd)->uuid;
+		}
+		
+		load_cmd_addr += load_cmd->cmdsize;
+	}
+	
+	return NULL;
+}
+
+static int
+is_current_kernel(void *kernel_header) {
+	// retrieves the address of the IDT
+	mach_vm_address_t idt_address = 0;
+	get_addr_idt(&idt_address);
+	// calculate the address of the int80 handler
+	mach_vm_address_t int80_address = calculate_int80address(idt_address);
+	// search backwards for the kernel base address (mach-o header)
+	mach_vm_address_t kernel_base = find_kernel_base(int80_address);
+	
+	uint64_t *uuid1 = get_uuid(kernel_header);
+	uint64_t *uuid2 = get_uuid(kernel_base);
+	
+	if(!uuid1 || !uuid2) {
+		return 0;
+	}
+	
+	return uuid1[0] == uuid2[0] && uuid1[1] == uuid2[1];
+	
+	return 1;
 }
 
 /*
