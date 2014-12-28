@@ -90,6 +90,7 @@ anti_ptrace(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original ptrace() function!");
+                disable_kernel_write();
                 return KERN_FAILURE;
             }
         }
@@ -102,6 +103,7 @@ anti_ptrace(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original ptrace() function!");
+                disable_kernel_write();
                 return KERN_FAILURE;
             }
         }
@@ -140,6 +142,7 @@ anti_sysctl(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original sysctl() function!");
+                disable_kernel_write();
                 return KERN_FAILURE;
             }
         }
@@ -152,6 +155,7 @@ anti_sysctl(int cmd)
             else
             {
                 LOG_ERROR("No pointer available for original sysctl() function!");
+                disable_kernel_write();
                 return KERN_FAILURE;
             }
         }
