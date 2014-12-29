@@ -123,8 +123,6 @@ init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base)
             }
         }
     }
-    /* not used anymore here */
-    vfs_context_rele(myvfs_ctx);
     
     if (found_kernel == 0)
     {
@@ -162,6 +160,7 @@ init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base)
 
 success:
     _FREE(kernel_header, M_TEMP);
+    vfs_context_rele(myvfs_ctx);
     // drop the iocount due to vnode_lookup()
     // we must do this else machine will block on shutdown/reboot
     vnode_put(kernel_vnode);
@@ -173,6 +172,7 @@ failure:
         _FREE(kinfo->linkedit_buf, M_TEMP);
     }
     _FREE(kernel_header, M_TEMP);
+    vfs_context_rele(myvfs_ctx);
     vnode_put(kernel_vnode);
     return KERN_FAILURE;
 }
