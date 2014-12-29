@@ -45,6 +45,7 @@
 void *g_sysent_addr;
 struct sysent *g_sysent;
 struct sysent_mavericks *g_sysent_mav;
+struct sysent_yosemite *g_sysent_yos;
 
 /* to distinguish between Mavericks and others because of different sysent structure */
 extern const int  version_major;
@@ -66,7 +67,7 @@ extern int (*real_sysctl)(struct proc *, struct __sysctl_args *, int *);
 
 // local functions
 static uint8_t process_header(const mach_vm_address_t target_address, uint64_t *data_address, uint64_t *data_size);
-static void* bruteforce_sysent(void);
+static void* bruteforce_sysent(mach_vm_address_t *out_kernel_base);
 
 #pragma mark Externally available functions
 
@@ -75,24 +76,28 @@ static void* bruteforce_sysent(void);
  * if it fails then kext loading will have to fail
  */
 kern_return_t
-find_sysent(void)
+find_sysent(mach_vm_address_t *out_kernel_base)
 {
     LOG_DEBUG("Finding sysent table...");
     // retrieve sysent address
-    g_sysent_addr = bruteforce_sysent();
+    g_sysent_addr = bruteforce_sysent(out_kernel_base);
     // if we can't find it return a kernel module failure
     if (g_sysent_addr == NULL)
     {
         LOG_ERROR("Cannot find sysent table");
         return KERN_FAILURE;
     }
-    if (version_major >= MAVERICKS)
+    switch (version_major)
     {
-        g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
-    }
-    else
-    {
-        g_sysent = (struct sysent*)g_sysent_addr;
+        case YOSEMITE:
+            g_sysent_yos = (struct sysent_yosemite*)g_sysent_addr;
+            break;
+        case MAVERICKS:
+            g_sysent_mav = (struct sysent_mavericks*)g_sysent_addr;
+            break;
+        default:
+            g_sysent = (struct sysent*)g_sysent_addr;
+            break;
     }
     return KERN_SUCCESS;
 }
@@ -104,7 +109,20 @@ kern_return_t
 cleanup_sysent(void)
 {
     enable_kernel_write();
-    if (version_major >= MAVERICKS)
+
+    if (version_major == YOSEMITE)
+    {
+        if (real_ptrace != NULL && g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        {
+            g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
+        }
+        if (real_sysctl != NULL && g_sysent_yos[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        {
+            g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
+        }
+        
+    }
+    else if (version_major == MAVERICKS)
     {
         if (real_ptrace != NULL && g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
@@ -216,7 +234,7 @@ find_kernel_base(const mach_vm_address_t int80_address)
  * Note: 32/64 bits compatible
  */
 static void *
-bruteforce_sysent(void)
+bruteforce_sysent(mach_vm_address_t *out_kernel_base)
 {
     // retrieves the address of the IDT
     mach_vm_address_t idt_address = 0;
@@ -226,6 +244,7 @@ bruteforce_sysent(void)
     mach_vm_address_t int80_address = calculate_int80address(idt_address);
     // search backwards for the kernel base address (mach-o header)
     mach_vm_address_t kernel_base = find_kernel_base(int80_address);
+    *out_kernel_base = kernel_base;
     uint64_t data_address = 0;
     uint64_t data_size = 0;
     // search for the __DATA segment
@@ -234,8 +253,25 @@ bruteforce_sysent(void)
     // bruteforce search for sysent in __DATA segment
     while (data_address <= data_limit)
     {
+        if (version_major == YOSEMITE)
+        {
+            struct sysent_yosemite *table = (struct sysent_yosemite*)data_address;
+            if((void*)table != NULL &&
+               table[SYS_exit].sy_narg      == 1 &&
+               table[SYS_fork].sy_narg      == 0 &&
+               table[SYS_read].sy_narg      == 3 &&
+               table[SYS_wait4].sy_narg     == 4 &&
+               table[SYS_ptrace].sy_narg    == 4 &&
+               table[SYS_getxattr].sy_narg  == 6 &&
+               table[SYS_listxattr].sy_narg == 4 &&
+               table[SYS_recvmsg].sy_narg   == 3 )
+            {
+                LOG_DEBUG("exit() address is %p", (void*)table[SYS_exit].sy_call);
+                return (void*)data_address;
+            }
+        }
         /* mavericks or higher */
-        if (version_major >= MAVERICKS)
+        else if (version_major == MAVERICKS)
         {
             struct sysent_mavericks *table = (struct sysent_mavericks*)data_address;
             if((void*)table != NULL &&

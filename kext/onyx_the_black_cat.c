@@ -54,8 +54,9 @@
 
 #define VERSION "3.0"
 
-// globals
+/* globals */
 struct kernel_info g_kernel_info;
+extern const int version_major;
 
 /*
  * THE FUN STARTS HERE
@@ -70,18 +71,28 @@ onyx_the_black_cat_start (kmod_info_t * ki, void * d)
            "|_____|_|_|_  |_,_|    \n"
            "          |___|        \n"
            "      The Black Cat v%s\n", VERSION);
-    // install the kernel control so we can enable/disable features
+    
+    /* needs to be updated for every new major version supported */
+    if (version_major > YOSEMITE)
+    {
+        LOG_ERROR("Only Yosemite or lower supported!");
+        return KERN_FAILURE;
+    }
+    
+    /* install the kernel control so we can enable/disable features */
     install_kern_control();
-    // locate sysent table
-    if (find_sysent() != KERN_SUCCESS)
+    /* locate sysent table */
+    mach_vm_address_t kernel_base = 0;
+    if (find_sysent(&kernel_base) != KERN_SUCCESS)
     {
         return KERN_FAILURE;
     }
-    if (init_kernel_info(&g_kernel_info) != KERN_SUCCESS)
+    /* read kernel info from the disk image */
+    if (init_kernel_info(&g_kernel_info, kernel_base) != KERN_SUCCESS)
     {
         return KERN_FAILURE;
     }
-	// ALL DONE
+
 	return KERN_SUCCESS;
 }
 

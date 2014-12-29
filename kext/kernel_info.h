@@ -41,7 +41,7 @@
 
 #include "my_data_definitions.h"
 
-kern_return_t init_kernel_info(struct kernel_info *kinfo);
+kern_return_t init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base);
 kern_return_t cleanup_kernel_info(struct kernel_info *kinfo);
 mach_vm_address_t solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve);
 mach_vm_address_t solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol);

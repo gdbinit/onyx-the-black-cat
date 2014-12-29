@@ -58,12 +58,21 @@
 #define MACH_KERNEL         "/mach_kernel"      // location of kernel in filesystem
 #define HEADER_SIZE         PAGE_SIZE_64*2      // amount of mach-o header to read
 
+static char *kernel_paths[] = {
+    "/mach_kernel",
+    "/System/Library/Kernels/kernel",
+    "/System/Library/Kernels/kernel.development",
+    "/System/Library/Kernels/kernel.debug"
+};
+
 // local prototypes
 static kern_return_t get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *kinfo);
 static kern_return_t process_kernel_mach_header(void *kernel_header, struct kernel_info *kinfo);
 static kern_return_t get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo);
 static void get_running_text_address(struct kernel_info *kinfo);
 static kern_return_t get_and_process_kernel_image(vnode_t kernel_vnode, struct kernel_info *kinfo);
+static int is_current_kernel(void *kernel_header, mach_vm_address_t kernel_base);
+static uint64_t * get_uuid(void *mach_header);
 
 # pragma mark Exported functions
 
@@ -73,17 +82,9 @@ static kern_return_t get_and_process_kernel_image(vnode_t kernel_vnode, struct k
  * the reads from disk are implemented using the available KPI VFS functions
  */
 kern_return_t
-init_kernel_info(struct kernel_info *kinfo)
+init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base)
 {
     kern_return_t error = 0;
-    // lookup vnode for /mach_kernel
-    vnode_t kernel_vnode = NULLVP;
-    error = vnode_lookup(MACH_KERNEL, 0, &kernel_vnode, NULL);
-    if (error)
-    {
-        LOG_ERROR("Vnode lookup on mach_kernel failed!");
-        return KERN_FAILURE;
-    }
 
     void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
     if (kernel_header == NULL)
@@ -91,12 +92,51 @@ init_kernel_info(struct kernel_info *kinfo)
         LOG_ERROR("Can't allocate memory.");
         return KERN_FAILURE;
     }
-    // read and process kernel header from filesystem
-    error = get_kernel_mach_header(kernel_header, kernel_vnode, kinfo);
-    if (error) goto failure;
-    error = process_kernel_mach_header(kernel_header, kinfo);
-    if (error) goto failure;
+    
+    /* lookup vnode for the kernel image file */
+    vnode_t kernel_vnode = NULLVP;
+    vfs_context_t myvfs_ctx = vfs_context_create(NULL);
+    if (myvfs_ctx == NULL)
+    {
+        LOG_ERROR("Failed to create context.");
+        return KERN_FAILURE;
+    }
 
+    int found_kernel = 0;
+    for(int i = 0; i < sizeof(kernel_paths) / sizeof(*kernel_paths); i++) {
+        
+        if (vnode_lookup(kernel_paths[i], 0, &kernel_vnode, myvfs_ctx) == 0)
+        {
+            if (get_kernel_mach_header(kernel_header, kernel_vnode, kinfo) == KERN_SUCCESS)
+            {
+                if(!is_current_kernel(kernel_header, kernel_base))
+                {
+                    vnode_put(kernel_vnode);
+                }
+                else
+                {
+                    LOG_DEBUG("Found current kernel path: %s", kernel_paths[i]);
+                    found_kernel = 1;
+                    break;
+                }
+            }
+        }
+    }
+    /* not used anymore here */
+    vfs_context_rele(myvfs_ctx);
+    
+    if (found_kernel == 0)
+    {
+        LOG_ERROR("Couldn't find kernel file image.");
+        goto failure;
+    }
+    
+    // process kernel header from filesystem
+    error = process_kernel_mach_header(kernel_header, kinfo);
+    if (error)
+    {
+        goto failure;
+    }
     // compute kaslr slide
     get_running_text_address(kinfo);
     kinfo->kaslr_slide = kinfo->running_text_addr - kinfo->disk_text_addr;
@@ -114,7 +154,10 @@ init_kernel_info(struct kernel_info *kinfo)
     }
     // read linkedit from filesystem
     error = get_kernel_linkedit(kernel_vnode, kinfo);
-    if (error) goto failure;
+    if (error)
+    {
+        goto failure;
+    }
 
 success:
     _FREE(kernel_header, M_TEMP);
@@ -124,7 +167,10 @@ success:
     return KERN_SUCCESS;
 failure:
     LOG_ERROR("Something failed at %s", __FUNCTION__);
-    if (kinfo->linkedit_buf != NULL) _FREE(kinfo->linkedit_buf, M_TEMP);
+    if (kinfo->linkedit_buf != NULL)
+    {
+        _FREE(kinfo->linkedit_buf, M_TEMP);
+    }
     _FREE(kernel_header, M_TEMP);
     vnode_put(kernel_vnode);
     return KERN_FAILURE;
@@ -261,16 +307,28 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         LOG_ERROR("uio_addiov returned error!");
         return error;
     }
-    // read kernel vnode into the buffer
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
     
+    vfs_context_t myvfs_ctx = vfs_context_create(NULL);
+    if (myvfs_ctx == NULL)
+    {
+        LOG_ERROR("Failed to create context.");
+        return KERN_FAILURE;
+    }
+
+    // read kernel vnode into the buffer
+    error = VNOP_READ(kernel_vnode, uio, 0, myvfs_ctx);
     if (error)
     {
-        LOG_ERROR("VNOP_READ failed!");
+        LOG_ERROR("VNOP_READ failed with error: %d.", error);
+        vfs_context_rele(myvfs_ctx);
         return error;
     }
-    else if (uio_resid(uio)) return EINVAL;
-
+    else if (uio_resid(uio))
+    {
+        vfs_context_rele(myvfs_ctx);
+        return EINVAL;
+    }
+    
     // process the header
     uint32_t magic = *(uint32_t*)buffer;
     if (magic == FAT_CIGAM)
@@ -296,9 +354,10 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
             fa++;
         }
         // read again
+        /* XXX: add error checking here! */
         uio = uio_create(1, file_offset, UIO_SYSSPACE, UIO_READ);
         error = uio_addiov(uio, CAST_USER_ADDR_T(buffer), HEADER_SIZE);
-        error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+        error = VNOP_READ(kernel_vnode, uio, 0, myvfs_ctx);
         kinfo->fat_offset = file_offset;
     }
     else
@@ -306,6 +365,7 @@ get_kernel_mach_header(void *buffer, vnode_t kernel_vnode, struct kernel_info *k
         kinfo->fat_offset = 0;
     }
 
+    vfs_context_rele(myvfs_ctx);
     return KERN_SUCCESS;
 }
 
@@ -327,17 +387,28 @@ get_kernel_linkedit(vnode_t kernel_vnode, struct kernel_info *kinfo)
     {
         return error;
     }
-    error = VNOP_READ(kernel_vnode, uio, 0, NULL);
+    
+    vfs_context_t myvfs_ctx = vfs_context_create(NULL);
+    if (myvfs_ctx == NULL)
+    {
+        LOG_ERROR("Failed to create context.");
+        return KERN_FAILURE;
+    }
+
+    error = VNOP_READ(kernel_vnode, uio, 0, myvfs_ctx);
     
     if (error)
     {
+        vfs_context_rele(myvfs_ctx);
         return error;
     }
     else if (uio_resid(uio))
     {
+        vfs_context_rele(myvfs_ctx);
         return EINVAL;
     }
     
+    vfs_context_rele(myvfs_ctx);
     return KERN_SUCCESS;
 }
 
@@ -489,3 +560,48 @@ get_running_text_address(struct kernel_info *kinfo)
         }
     }
 }
+
+static uint64_t *
+get_uuid(void *mach_header)
+{
+    struct mach_header *mh = (struct mach_header*)mach_header;
+    int header_size = 0;
+    if (mh->magic == MH_MAGIC)
+    {
+        header_size = sizeof(struct mach_header);
+    }
+    else if (mh->magic == MH_MAGIC_64)
+    {
+        header_size = sizeof(struct mach_header_64);
+    }
+    
+    struct load_command *load_cmd = NULL;
+    char *load_cmd_addr = (char*)mach_header + header_size;
+    for (uint32_t i = 0; i < mh->ncmds; i++)
+    {
+        load_cmd = (struct load_command*)load_cmd_addr;
+        if (load_cmd->cmd == LC_UUID)
+        {
+            return (uint64_t *)((struct uuid_command *)load_cmd)->uuid;
+        }
+        
+        load_cmd_addr += load_cmd->cmdsize;
+    }
+    
+    return NULL;
+}
+
+static int
+is_current_kernel(void *kernel_header, mach_vm_address_t kernel_base)
+{
+    uint64_t *uuid1 = get_uuid(kernel_header);
+    uint64_t *uuid2 = get_uuid((void*)kernel_base);
+    
+    if(!uuid1 || !uuid2)
+    {
+        return 0;
+    }
+    
+    return uuid1[0] == uuid2[0] && uuid1[1] == uuid2[1];
+}
+

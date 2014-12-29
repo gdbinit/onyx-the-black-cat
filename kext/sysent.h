@@ -47,7 +47,7 @@
 #include <mach-o/loader.h>
 #include <libkern/libkern.h>
 
-kern_return_t find_sysent(void);
+kern_return_t find_sysent(mach_vm_address_t *out_kernel_base);
 kern_return_t cleanup_sysent(void);
 mach_vm_address_t calculate_int80address(const mach_vm_address_t idt_address);
 mach_vm_address_t find_kernel_base(const mach_vm_address_t int80_address);

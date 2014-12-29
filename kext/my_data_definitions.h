@@ -89,10 +89,19 @@ struct sysent {		/* system call table */
 								 */
 };
 
-/* Mavericks sysent structure is something like this */
+/* Sysent structure got modified in Mavericks */
 struct sysent_mavericks {
     sy_call_t   *sy_call;
     sy_munge_t  *sy_arg_munge32;
+    sy_munge_t  *sy_arg_munge64;
+    int32_t     sy_return_type;
+    int16_t     sy_narg;
+    uint16_t    sy_arg_bytes;
+};
+
+/* And again in Yosemite */
+struct sysent_yosemite {
+    sy_call_t   *sy_call;
     sy_munge_t  *sy_arg_munge64;
     int32_t     sy_return_type;
     int16_t     sy_narg;
@@ -103,6 +112,7 @@ struct sysent_mavericks {
 #define ENABLE 1
 
 #define MAVERICKS   13
+#define YOSEMITE    14
 
 #if DEBUG
 #define LOG_DEBUG(fmt, ...) printf("[DEBUG] " fmt "\n", ## __VA_ARGS__)
