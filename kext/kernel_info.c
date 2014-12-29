@@ -85,13 +85,6 @@ kern_return_t
 init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base)
 {
     kern_return_t error = 0;
-
-    void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
-    if (kernel_header == NULL)
-    {
-        LOG_ERROR("Can't allocate memory.");
-        return KERN_FAILURE;
-    }
     
     /* lookup vnode for the kernel image file */
     vnode_t kernel_vnode = NULLVP;
@@ -99,6 +92,14 @@ init_kernel_info(struct kernel_info *kinfo, mach_vm_address_t kernel_base)
     if (myvfs_ctx == NULL)
     {
         LOG_ERROR("Failed to create context.");
+        return KERN_FAILURE;
+    }
+
+    void *kernel_header = _MALLOC(HEADER_SIZE, M_TEMP, M_ZERO);
+    if (kernel_header == NULL)
+    {
+        LOG_ERROR("Can't allocate memory.");
+        vfs_context_rele(myvfs_ctx);
         return KERN_FAILURE;
     }
 
@@ -205,10 +206,16 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
     // we just read the __LINKEDIT but fileoff values are relative to the full /mach_kernel
     // subtract the base of LINKEDIT to fix the value into our buffer
     uint64_t symbol_off = kinfo->symboltable_fileoff - (kinfo->linkedit_fileoff - kinfo->fat_offset);
-    if (symbol_off > kinfo->symboltable_fileoff) return 0;
+    if (symbol_off > kinfo->symboltable_fileoff)
+    {
+        return 0;
+    }
     uint64_t string_off = kinfo->stringtable_fileoff - (kinfo->linkedit_fileoff - kinfo->fat_offset);
-    if (string_off > kinfo->stringtable_fileoff) return 0;
-
+    if (string_off > kinfo->stringtable_fileoff)
+    {
+        return 0;
+    }
+    
     if (sizeof(void*) == 4)
     {
         struct nlist *nlist = NULL;

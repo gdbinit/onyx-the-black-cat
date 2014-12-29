@@ -53,11 +53,6 @@
 #define P_LNOATTACH     0x00001000
 #define P_LTRACED       0x00000400
 
-/* Macros to clear/set/test flags. */
-#define SET(t, f)       (t) |= (f)
-#define CLR(t, f)       (t) &= ~(f)
-#define ISSET(t, f)     ((t) & (f))
-
 // external variables
 extern void *g_sysent_addr;
 extern struct sysent *g_sysent;
