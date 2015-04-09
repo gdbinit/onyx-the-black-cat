@@ -48,12 +48,7 @@ get_addr_idt(mach_vm_address_t *idt)
 {
 	uint8_t idtr[10];
 	__asm__ volatile ("sidt %0": "=m" (idtr));
-#if __LP64__
 	*idt = *(mach_vm_address_t *)(idtr+2);
-#else
-    *idt = *(mach_vm_address_t *)(idtr+2);
-#endif
-//	return(idt);
 }
 
 // retrieve the size of the IDT

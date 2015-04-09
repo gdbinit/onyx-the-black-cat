@@ -174,17 +174,12 @@ calculate_int80address(const mach_vm_address_t idt_address)
 	mach_vm_address_t int80_address = 0;
     // we need to compute the address, it's not direct
     // extract the stub address
-#if __LP64__
     // retrieve the descriptor for interrupt 0x80
     // the IDT is an array of descriptors
     int80_descriptor = (struct descriptor_idt*)(idt_address+sizeof(struct descriptor_idt)*0x80);
     uint64_t high = (unsigned long)int80_descriptor->offset_high << 32;
     uint32_t middle = (unsigned int)int80_descriptor->offset_middle << 16;
     int80_address = (mach_vm_address_t)(high + middle + int80_descriptor->offset_low);
-#else
-    int80_descriptor = (struct descriptor_idt*)(idt_address+sizeof(struct descriptor_idt)*0x80);
-    int80_address = (mach_vm_address_t)(int80_descriptor->offset_middle << 16) + int80_descriptor->offset_low;
-#endif
 	LOG_DEBUG("Address of interrupt 80 stub is 0x%llx", int80_address);
     return int80_address;
 }
@@ -197,7 +192,6 @@ mach_vm_address_t
 find_kernel_base(const mach_vm_address_t int80_address)
 {
     mach_vm_address_t temp_address = int80_address;
-#if __LP64__
     struct segment_command_64 *segment_command = NULL;
     while (temp_address > 0)
     {
@@ -214,27 +208,6 @@ find_kernel_base(const mach_vm_address_t int80_address)
         if (temp_address - 1 > temp_address) break;
         temp_address--;
     }
-#else
-    struct segment_command *segment_command = NULL;
-    while (temp_address > 0)
-    {
-        if (*(uint32_t*)((uint32_t)temp_address) == MH_MAGIC)
-        {
-            // make sure it's the header and not some reference to the MAGIC number
-            segment_command = (struct segment_command*)((uint32_t)temp_address + sizeof(struct mach_header));
-            if (strncmp(segment_command->segname, "__TEXT", 16) == 0)
-            {
-                LOG_DEBUG("Found kernel mach-o header address at %p", (void*)((uint32_t)temp_address));
-                return (mach_vm_address_t)temp_address;
-            }
-        }
-        if (temp_address - 1 > temp_address)
-        {
-            break;
-        }
-        temp_address--;
-    }
-#endif
     return 0;
 }
 

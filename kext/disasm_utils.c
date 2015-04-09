@@ -103,11 +103,7 @@ find_resume_flag(mach_vm_address_t start, struct patches *patch_locations)
     
 	_DecodeResult res = 0;
     _CodeInfo ci = {0} ;
-#if __LP64__
     ci.dt = Decode64Bits;
-#else
-    ci.dt = Decode32Bits;
-#endif
     ci.features = DF_NONE;
     ci.codeLen = 4096;
     ci.code = (unsigned char*)start;
@@ -253,11 +249,7 @@ find_task_for_pid(mach_vm_address_t start, struct patches *patch_locations)
     
 	_DecodeResult res = 0;
     _CodeInfo ci = {0} ;
-#if __LP64__
     ci.dt = Decode64Bits;
-#else
-    ci.dt = Decode32Bits;
-#endif
     ci.features = DF_NONE;
     ci.codeLen = 4096;
     ci.code = (unsigned char*)start;
@@ -391,11 +383,7 @@ find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patche
     
 	_DecodeResult res = 0;
     _CodeInfo ci = {0} ;
-#if __LP64__
     ci.dt = Decode64Bits;
-#else
-    ci.dt = Decode32Bits;
-#endif
     ci.features = DF_NONE;
     ci.codeLen = 4096;
     ci.code = (unsigned char*)start;
@@ -524,11 +512,7 @@ disasm_jumps(mach_vm_address_t start, struct patches *patch_locations)
     unsigned int decodedInstructionsCount = 0;
 	_DecodeResult res = 0;
     _CodeInfo ci = {0} ;
-#if __LP64__
     ci.dt = Decode64Bits;
-#else
-    ci.dt = Decode32Bits;
-#endif
     ci.features = DF_NONE;
     ci.codeLen = 512;
     ci.code = (unsigned char*)start;

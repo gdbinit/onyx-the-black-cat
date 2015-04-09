@@ -53,7 +53,7 @@
 #include "patchkernel.h"
 #include "cpu_protections.h"
 
-#define VERSION "3.0"
+#define VERSION "4.0"
 
 /* globals */
 struct kernel_info g_kernel_info;
