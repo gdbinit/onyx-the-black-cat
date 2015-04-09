@@ -42,6 +42,7 @@
 #include <mach/mach_types.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <sys/queue.h>
 
 struct activity
 {
@@ -71,13 +72,23 @@ struct kernel_info
     uint32_t fat_offset;                 // the file offset inside the fat archive for the active arch
 };
 
+SLIST_HEAD(patches, patch_location);
+
+enum patch_type
+{
+    kPatch_resume = 0,
+    kPatch_taskforpid,
+    kPatch_kauth
+};
+
 struct patch_location
 {
     mach_vm_address_t address;
+    SLIST_ENTRY(patch_location) next;
     int size;
-    char orig_bytes[15];
     int jmp;                        // 0 = jz, 1 = jnz
-    struct patch_location *next;
+    enum patch_type type;
+    char orig_bytes[15];
 };
 
 // sysent definitions

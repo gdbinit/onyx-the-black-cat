@@ -36,7 +36,6 @@
 		7BFDE78E174D92A8004A5391 /* kernel_info.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BFDE78C174D92A7004A5391 /* kernel_info.c */; };
 		7BFDE78F174D92A8004A5391 /* kernel_info.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BFDE78D174D92A8004A5391 /* kernel_info.h */; };
 		7BFDE790174DBACA004A5391 /* disasm_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 7BFDE788174D8D2E004A5391 /* disasm_utils.c */; };
-		7BFDE792174DBBBD004A5391 /* utlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 7BFDE791174DBBBD004A5391 /* utlist.h */; };
 		7BFDE794174EEA0E004A5391 /* README in Resources */ = {isa = PBXBuildFile; fileRef = 7BFDE793174EEA0E004A5391 /* README */; };
 		DE00E0F31426ADF500E09EDC /* sysent.h in Headers */ = {isa = PBXBuildFile; fileRef = DE00E0F11426ADF500E09EDC /* sysent.h */; };
 		DE00E0F41426ADF500E09EDC /* sysent.c in Sources */ = {isa = PBXBuildFile; fileRef = DE00E0F21426ADF500E09EDC /* sysent.c */; };
@@ -86,7 +85,6 @@
 		7BFDE789174D8D2E004A5391 /* disasm_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = disasm_utils.h; sourceTree = "<group>"; };
 		7BFDE78C174D92A7004A5391 /* kernel_info.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = kernel_info.c; sourceTree = "<group>"; };
 		7BFDE78D174D92A8004A5391 /* kernel_info.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel_info.h; sourceTree = "<group>"; };
-		7BFDE791174DBBBD004A5391 /* utlist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utlist.h; sourceTree = "<group>"; };
 		7BFDE793174EEA0E004A5391 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
 		D27513B306A6225300ADB3A4 /* Kernel.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Kernel.framework; path = /System/Library/Frameworks/Kernel.framework; sourceTree = "<absolute>"; };
 		DE00E0F11426ADF500E09EDC /* sysent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sysent.h; sourceTree = "<group>"; };
@@ -165,7 +163,6 @@
 				7BFDE789174D8D2E004A5391 /* disasm_utils.h */,
 				7BFDE78C174D92A7004A5391 /* kernel_info.c */,
 				7BFDE78D174D92A8004A5391 /* kernel_info.h */,
-				7BFDE791174DBBBD004A5391 /* utlist.h */,
 				7BFDE75F174D8D04004A5391 /* distorm */,
 			);
 			name = Source;
@@ -248,7 +245,6 @@
 				7BFDE787174D8D05004A5391 /* x86defs.h in Headers */,
 				7BFDE78B174D8D2E004A5391 /* disasm_utils.h in Headers */,
 				7BFDE78F174D92A8004A5391 /* kernel_info.h in Headers */,
-				7BFDE792174DBBBD004A5391 /* utlist.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -367,6 +363,7 @@
 		1DEB91C408733DAC0010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -392,6 +389,7 @@
 		1DEB91C508733DAC0010E9CD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
 				GCC_MODEL_TUNING = G5;

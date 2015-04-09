@@ -45,14 +45,84 @@
 #include <i386/cpuid.h>
 #include <i386/proc_reg.h>
 #include <i386/locks.h>
+#include <sys/malloc.h>
 
 #include "my_data_definitions.h"
 #include "disasm_utils.h"
 #include "kernel_info.h"
 #include "cpu_protections.h"
-#include "utlist.h"
 
 extern struct kernel_info g_kernel_info;
+
+struct patches patches_head = SLIST_HEAD_INITIALIZER(patches_head);
+
+/* find all locations we might want to patch */
+kern_return_t
+find_patch_locations(void)
+{
+    /* find resume flag */
+    mach_vm_address_t machine_thread_set_state_addr = solve_kernel_symbol(&g_kernel_info, "_machine_thread_set_state");
+    if (machine_thread_set_state_addr)
+    {
+        if (find_resume_flag(machine_thread_set_state_addr, &patches_head) != KERN_SUCCESS)
+        {
+            LOG_ERROR("Can't find locations to patch resume flag!");
+            return KERN_FAILURE;
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to find machine_thread_set_state symbol address.");
+        return KERN_FAILURE;
+    }
+
+    /* find task_for_pid */
+    mach_vm_address_t task_for_pid_addr = solve_kernel_symbol(&g_kernel_info, "_task_for_pid");
+    if (task_for_pid_addr)
+    {
+        if (find_task_for_pid(task_for_pid_addr, &patches_head))
+        {
+            LOG_ERROR("Can't find location to patch task_for_pid()!");
+            return KERN_FAILURE;
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to find task_for_pid symbol address.");
+        return KERN_FAILURE;
+    }
+
+    /* find kauth */
+    mach_vm_address_t ptrace_addr = solve_kernel_symbol(&g_kernel_info, "_ptrace");
+    mach_vm_address_t kauth_authorize_process_addr = solve_kernel_symbol(&g_kernel_info, "_kauth_authorize_process");
+    if (ptrace_addr && kauth_authorize_process_addr)
+    {
+        if (find_kauth(ptrace_addr, kauth_authorize_process_addr, &patches_head))
+        {
+            LOG_ERROR("Can't find location to patch kauth!");
+            return KERN_FAILURE;
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to find ptrace or kauth_authorize_process symbol address.");
+        return KERN_FAILURE;
+    }
+    return KERN_SUCCESS;
+}
+
+kern_return_t
+cleanup_patch_locations(void)
+{
+    struct patch_location *el = NULL;
+    struct patch_location *tmp = NULL;
+    SLIST_FOREACH_SAFE(el, &patches_head, next, tmp)
+    {
+        SLIST_REMOVE(&patches_head, el, patch_location, next);
+        _FREE(el, M_TEMP);
+    }
+    return KERN_SUCCESS;
+}
 
 /*
  * function to enable/disable the x86 resume flag bit that is cleared by XNU kernel
@@ -60,25 +130,18 @@ extern struct kernel_info g_kernel_info;
 kern_return_t
 patch_resume_flag(int cmd)
 {
-    static struct patch_location *patch_locations = NULL;
-    // get the locations we need to patch
-    if (patch_locations == NULL)
-    {
-        mach_vm_address_t symbol_addr = solve_kernel_symbol(&g_kernel_info, "_machine_thread_set_state");
-        if (symbol_addr)
-        {
-            find_resume_flag(symbol_addr, &patch_locations);
-        }
-    }
     // patch bytes
     if (cmd == ENABLE)
     {
         enable_kernel_write();
-        struct patch_location *tmp = NULL;
-        LL_FOREACH(patch_locations, tmp)
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
         {
-            int offset = tmp->size - 4;
-            *(uint32_t*)(tmp->address + offset) = 0xFFFF8DFF;
+            if (el->type == kPatch_resume)
+            {
+                int offset = el->size - 4;
+                *(uint32_t*)(el->address + offset) = 0xFFFF8DFF;
+            }
         }
         disable_kernel_write();
     }
@@ -86,10 +149,13 @@ patch_resume_flag(int cmd)
     else if (cmd == DISABLE)
     {
         enable_kernel_write();
-        struct patch_location *tmp = NULL;
-        LL_FOREACH(patch_locations, tmp)
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
         {
-            memcpy(tmp->address, tmp->orig_bytes, tmp->size);
+            if (el->type == kPatch_resume)
+            {
+                memcpy(el->address, el->orig_bytes, el->size);
+            }
         }
         disable_kernel_write();
     }
@@ -145,47 +211,35 @@ patch_resume_flag(int cmd)
 kern_return_t
 patch_task_for_pid(int cmd)
 {
-    static struct patch_location patch = {0};
-    
-    if (patch.address == 0)
-    {
-        mach_vm_address_t task_for_pid_sym = solve_kernel_symbol(&g_kernel_info, "_task_for_pid");
-        if (task_for_pid_sym)
-        {
-            if  (find_task_for_pid(task_for_pid_sym, &patch))
-            {
-                LOG_ERROR("Can't find location to patch task_for_pid()!");
-                return KERN_FAILURE;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Can't solve required symbols to patch task_for_pid()");
-            return KERN_FAILURE;
-        }
-    }
-    
     if (cmd == ENABLE)
     {
         enable_kernel_write();
         // XXX: somewhat fragile assumptions going on here ;-) Beware!
         // if it's a JZ we NOP everything
-        if (patch.jmp == 0)
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
         {
-            memset(patch.address, 0x90, patch.size);
-        }
-        // if it's a JNZ we convert into a JMP
-        else if (patch.jmp == 1)
-        {
-            // XXX: let's trust our luck and assume it's a short jump
-            if (patch.size == 2)
+            if (el->type == kPatch_taskforpid)
             {
-                memset(patch.address, 0xEB, 1);
-            }
-            else if (patch.size == 6)
-            {
-                memset(patch.address, 0x90, 1);
-                memset(patch.address+1, 0xE9, 1);
+                if (el->jmp == 0)
+                {
+                    memset(el->address, 0x90, el->size);
+                }
+                // if it's a JNZ we convert into a JMP
+                else if (el->jmp == 1)
+                {
+                    // XXX: let's trust our luck and assume it's a short jump
+                    if (el->size == 2)
+                    {
+                        memset(el->address, 0xEB, 1);
+                    }
+                    else if (el->size == 6)
+                    {
+                        memset(el->address, 0x90, 1);
+                        memset(el->address+1, 0xE9, 1);
+                    }
+                }
+                
             }
         }
         disable_kernel_write();
@@ -193,7 +247,11 @@ patch_task_for_pid(int cmd)
     else if (cmd == DISABLE)
     {
         enable_kernel_write();
-        memcpy(patch.address, patch.orig_bytes, patch.size);
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
+        {
+            memcpy(el->address, el->orig_bytes, el->size);
+        }
         disable_kernel_write();
     }
     return KERN_SUCCESS;
@@ -206,46 +264,34 @@ patch_task_for_pid(int cmd)
 kern_return_t
 patch_kauth(int cmd)
 {
-    static struct patch_location patch = {0};
-    if (patch.address == 0)
-    {
-        mach_vm_address_t ptrace_sym = solve_kernel_symbol(&g_kernel_info, "_ptrace");
-        mach_vm_address_t kauth_authorize_process_sym = solve_kernel_symbol(&g_kernel_info, "_kauth_authorize_process");
-        if (ptrace_sym && kauth_authorize_process_sym)
-        {
-            if (find_kauth(ptrace_sym, kauth_authorize_process_sym, &patch))
-            {
-                LOG_ERROR("Can't find location to patch kauth!");
-                return KERN_FAILURE;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Can't solve required symbols to patch kauth()");
-            return KERN_FAILURE;
-        }
-    }
     if (cmd == ENABLE)
     {
         enable_kernel_write();
-        /* JNZ is modified to NOP */
-        if (patch.jmp == 1)
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
         {
-            memset(patch.address, 0x90, patch.size);
-        }
-        /* JZ modified to JMP */
-        else if (patch.jmp == 0)
-        {
-            /* expected near jump */
-            if (patch.size == 6)
+            if (el->type == kPatch_kauth)
             {
-                /* near jump is 5 bytes, conditional six so patch first and change next to E9 */
-                memset(patch.address, 0x90, 1);
-                memset(patch.address+1, 0xE9, 1);
-            }
-            else if (patch.size == 2)
-            {
-                memset(patch.address, 0xEB, 1);
+                /* JNZ is modified to NOP */
+                if (el->jmp == 1)
+                {
+                    memset(el->address, 0x90, el->size);
+                }
+                /* JZ modified to JMP */
+                else if (el->jmp == 0)
+                {
+                    /* expected near jump */
+                    if (el->size == 6)
+                    {
+                        /* near jump is 5 bytes, conditional six so patch first and change next to E9 */
+                        memset(el->address, 0x90, 1);
+                        memset(el->address+1, 0xE9, 1);
+                    }
+                    else if (el->size == 2)
+                    {
+                        memset(el->address, 0xEB, 1);
+                    }
+                }
             }
         }
         disable_kernel_write();
@@ -253,7 +299,14 @@ patch_kauth(int cmd)
     else if (cmd == DISABLE)
     {
         enable_kernel_write();
-        memcpy(patch.address, patch.orig_bytes, patch.size);
+        struct patch_location *el = NULL;
+        SLIST_FOREACH(el, &patches_head, next)
+        {
+            if (el->type == kPatch_kauth)
+            {
+                memcpy(el->address, el->orig_bytes, el->size);
+            }
+        }
         disable_kernel_write();
     }
     return KERN_SUCCESS;

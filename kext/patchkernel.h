@@ -45,5 +45,7 @@ kern_return_t patch_resume_flag(int cmd);
 kern_return_t patch_task_for_pid(int cmd);
 kern_return_t patch_kauth(int cmd);
 kern_return_t patch_singlestep(int cmd);
+kern_return_t find_patch_locations(void);
+kern_return_t cleanup_patch_locations(void);
 
 #endif

@@ -94,7 +94,11 @@ onyx_the_black_cat_start (kmod_info_t * ki, void * d)
     {
         return KERN_FAILURE;
     }
-
+    /* find all the locations to be patched */
+    if (find_patch_locations() != KERN_SUCCESS)
+    {
+        return KERN_FAILURE;
+    }
 	return KERN_SUCCESS;
 }
 
@@ -125,6 +129,8 @@ onyx_the_black_cat_stop (kmod_info_t * ki, void * d)
     {
         patch_kauth(DISABLE);
     }
+    /* avoid leaking of patch locations linked list */
+    cleanup_patch_locations();
     // ALL DONE
 	return KERN_SUCCESS;
 }

@@ -41,8 +41,8 @@
 
 #include "my_data_definitions.h"
 
-kern_return_t find_resume_flag(mach_vm_address_t start, struct patch_location **patch_locations);
-kern_return_t find_task_for_pid(mach_vm_address_t start, struct patch_location *topatch);
-kern_return_t find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patch_location *topatch);
+kern_return_t find_resume_flag(mach_vm_address_t start, struct patches *patch_locations);
+kern_return_t find_task_for_pid(mach_vm_address_t start, struct patches *patch_locations);
+kern_return_t find_kauth(mach_vm_address_t start, mach_vm_address_t symbol_addr, struct patches *patch_locations);
 
 #endif
