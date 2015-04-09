@@ -51,11 +51,14 @@
 #include "kernel_info.h"
 #include "disasm_utils.h"
 #include "patchkernel.h"
+#include "cpu_protections.h"
 
 #define VERSION "3.0"
 
 /* globals */
 struct kernel_info g_kernel_info;
+struct activity g_activity;
+
 extern const int version_major;
 
 /*
@@ -71,14 +74,13 @@ onyx_the_black_cat_start (kmod_info_t * ki, void * d)
            "|_____|_|_|_  |_,_|    \n"
            "          |___|        \n"
            "      The Black Cat v%s\n", VERSION);
-    
+
     /* needs to be updated for every new major version supported */
     if (version_major > YOSEMITE)
     {
         LOG_ERROR("Only Yosemite or lower supported!");
         return KERN_FAILURE;
     }
-    
     /* install the kernel control so we can enable/disable features */
     install_kern_control();
     /* locate sysent table */
@@ -111,9 +113,18 @@ onyx_the_black_cat_stop (kmod_info_t * ki, void * d)
     // remove all sysent hijacks
 	cleanup_sysent();
     // remove any patches
-    patch_resume_flag(DISABLE);
-    patch_task_for_pid(DISABLE);
-    patch_kauth(DISABLE);
+    if (g_activity.resume_flag == 1)
+    {
+        patch_resume_flag(DISABLE);
+    }
+    if (g_activity.taskforpid == 1)
+    {
+        patch_task_for_pid(DISABLE);
+    }
+    if (g_activity.kauth == 1)
+    {
+        patch_kauth(DISABLE);
+    }
     // ALL DONE
 	return KERN_SUCCESS;
 }

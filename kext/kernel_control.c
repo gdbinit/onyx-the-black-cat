@@ -55,6 +55,8 @@
 #include "patchkernel.h"
 #include "antidebug.h"
 
+extern struct activity g_activity;
+
 // local prototypes
 static int ctl_connect(kern_ctl_ref ctl_ref, struct sockaddr_ctl *sac, void **unitinfo);
 static errno_t ctl_disconnect(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo);
@@ -194,73 +196,109 @@ ctl_set(kern_ctl_ref ctl_ref, u_int32_t unit, void *unitinfo, int opt, void *dat
         case PATCH_TASK_FOR_PID:
         {
             LOG_DEBUG("Received request to patch task_for_pid.");
-            patch_task_for_pid(ENABLE);
+            if (patch_task_for_pid(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.taskforpid = 1;
+            }
             break;
         }
         case UNPATCH_TASK_FOR_PID:
         {
             LOG_DEBUG("Received request to restore task_for_pid.");
-            patch_task_for_pid(DISABLE);
+            if (patch_task_for_pid(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.taskforpid = 0;
+            }
             break;
         }
         case ANTI_PTRACE_ON:
         {
             LOG_DEBUG("Received request to patch ptrace.");
-            anti_ptrace(ENABLE);
+            if (anti_ptrace(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.ptrace = 1;
+            }
             break;
         }
         case ANTI_PTRACE_OFF:
         {
             LOG_DEBUG("Received request to restore ptrace.");
-            anti_ptrace(DISABLE);
+            if (anti_ptrace(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.ptrace = 0;
+            }
             break;
         }
         case ANTI_SYSCTL_ON:
         {
             LOG_DEBUG("Received request to patch sysctl.");
-            anti_sysctl(ENABLE);
+            if (anti_sysctl(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.sysctl = 1;
+            }
             break;
         }
         case ANTI_SYSCTL_OFF:
         {
             LOG_DEBUG("Received request to restore sysctl.");
-            anti_sysctl(DISABLE);
+            if (anti_sysctl(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.sysctl = 0;
+            }
             break;
         }
         case ANTI_KAUTH_ON:
         {
             LOG_DEBUG("Received request to patch kauth.");
-            patch_kauth(ENABLE);
+            if (patch_kauth(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.kauth = 1;
+            }
             break;
         }
         case ANTI_KAUTH_OFF:
         {
             LOG_DEBUG("Received request to restore kauth.");
-            patch_kauth(DISABLE);
+            if (patch_kauth(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.kauth = 0;
+            }
             break;
         }
         case PATCH_RESUME_FLAG:
         {
             LOG_DEBUG("Received request to patch resume flag.");
-            patch_resume_flag(ENABLE);
+            if (patch_resume_flag(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.resume_flag = 1;
+            }
             break;
         }
         case UNPATCH_RESUME_FLAG:
         {
             LOG_DEBUG("Received request to restore resume flag.");
-            patch_resume_flag(DISABLE);
+            if (patch_resume_flag(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.resume_flag = 0;
+            }
             break;
         }
         case PATCH_SINGLESTEP:
         {
             LOG_DEBUG("Received request to patch single step.");
-            patch_singlestep(ENABLE);
+            if (patch_singlestep(ENABLE) == KERN_SUCCESS)
+            {
+                g_activity.singlestep = 1;
+            }
             break;
         }
         case UNPATCH_SINGLESTEP:
         {
             LOG_DEBUG("Received request to restore single step.");
-            patch_singlestep(DISABLE);
+            if (patch_singlestep(DISABLE) == KERN_SUCCESS)
+            {
+                g_activity.singlestep = 0;
+            }
             break;
         }
         default:

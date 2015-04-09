@@ -46,6 +46,7 @@ void *g_sysent_addr;
 struct sysent *g_sysent;
 struct sysent_mavericks *g_sysent_mav;
 struct sysent_yosemite *g_sysent_yos;
+extern struct activity g_activity;
 
 /* to distinguish between Mavericks and others because of different sysent structure */
 extern const int  version_major;
@@ -108,15 +109,20 @@ find_sysent(mach_vm_address_t *out_kernel_base)
 kern_return_t
 cleanup_sysent(void)
 {
+    LOG_DEBUG("Restoring sysent hooks...");
     enable_kernel_write();
 
     if (version_major == YOSEMITE)
     {
-        if (real_ptrace != NULL && g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        if (g_activity.ptrace == 1 &&
+            real_ptrace != NULL &&
+            g_sysent_yos[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
             g_sysent_yos[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
         }
-        if (real_sysctl != NULL && g_sysent_yos[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        if (g_activity.sysctl == 1 &&
+            real_sysctl != NULL &&
+            g_sysent_yos[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
         {
             g_sysent_yos[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
         }
@@ -124,23 +130,30 @@ cleanup_sysent(void)
     }
     else if (version_major == MAVERICKS)
     {
-        if (real_ptrace != NULL && g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        if (g_activity.ptrace == 1 &&
+            real_ptrace != NULL &&
+            g_sysent_mav[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
             g_sysent_mav[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
         }
-        if (real_sysctl != NULL && g_sysent_mav[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        if (g_activity.sysctl == 1 &&
+            real_sysctl != NULL &&
+            g_sysent_mav[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
         {
             g_sysent_mav[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
         }
-        
     }
     else
     {
-        if (real_ptrace != NULL && g_sysent[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
+        if (g_activity.ptrace == 1 &&
+            real_ptrace != NULL &&
+            g_sysent[SYS_ptrace].sy_call != (sy_call_t *)real_ptrace)
         {
             g_sysent[SYS_ptrace].sy_call = (sy_call_t *)real_ptrace;
         }
-        if (real_sysctl != NULL && g_sysent[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
+        if (g_activity.sysctl == 1 &&
+            real_sysctl != NULL &&
+            g_sysent[SYS___sysctl].sy_call != (sy_call_t *)real_sysctl)
         {
             g_sysent[SYS___sysctl].sy_call = (sy_call_t *)real_sysctl;
         }

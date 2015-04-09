@@ -82,6 +82,7 @@ anti_ptrace(int cmd)
             disable_kernel_write();
             return KERN_FAILURE;
         }
+        LOG_DEBUG("Restoring original ptrace system call...");
         // restore the pointer to the original function
         switch (version_major)
         {
@@ -98,6 +99,7 @@ anti_ptrace(int cmd)
     }
     else if (cmd == ENABLE)
     {
+        LOG_DEBUG("Hooking original ptrace system call...");
         switch (version_major)
         {
             case YOSEMITE:

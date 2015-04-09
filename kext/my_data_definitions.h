@@ -43,6 +43,16 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+struct activity
+{
+    int ptrace;
+    int sysctl;
+    int resume_flag;
+    int taskforpid;
+    int kauth;
+    int singlestep;
+};
+
 struct kernel_info
 {
     mach_vm_address_t running_text_addr; // the address of running __TEXT segment
