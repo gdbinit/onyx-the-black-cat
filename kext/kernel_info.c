@@ -226,7 +226,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             nlist = (struct nlist*)((char*)kinfo->linkedit_buf + symbol_off + i * sizeof(struct nlist));
             char *symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist->n_un.n_strx);
             // find if symbol matches
-            if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
+            if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)+1) == 0)
             {
                 LOG_DEBUG("Found symbol %s at 0x%llx (non-aslr 0x%x)", symbol_to_solve, nlist->n_value + kinfo->kaslr_slide, nlist->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
@@ -244,7 +244,7 @@ solve_kernel_symbol(struct kernel_info *kinfo, char *symbol_to_solve)
             nlist64 = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + i * sizeof(struct nlist_64));
             char *symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist64->n_un.n_strx);
             // find if symbol matches
-            if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)) == 0)
+            if (strncmp(symbol_to_solve, symbol_string, strlen(symbol_to_solve)+1) == 0)
             {
                 LOG_DEBUG("Found symbol %s at 0x%llx (non-aslr 0x%llx)", symbol_to_solve, nlist64->n_value + kinfo->kaslr_slide, nlist64->n_value);
                 // the symbols values are without kernel ASLR so we need to add it
@@ -278,7 +278,7 @@ solve_next_kernel_symbol(const struct kernel_info *kinfo, const char *symbol)
     {
         nlist = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + i * sizeof(struct nlist_64));
         char *symbol_string = ((char*)kinfo->linkedit_buf + string_off + nlist->n_un.n_strx);
-        if (strncmp(symbol, symbol_string, strlen(symbol)) == 0)
+        if (strncmp(symbol, symbol_string, strlen(symbol)+1) == 0)
         {
             // lookup the next symbol
             nlist = (struct nlist_64*)((char*)kinfo->linkedit_buf + symbol_off + (i+1) * sizeof(struct nlist_64));
