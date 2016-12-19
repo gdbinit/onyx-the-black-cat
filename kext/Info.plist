@@ -6,14 +6,14 @@
 	<string>English</string>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
-	<key>CFBundleName</key>
-	<string>${PRODUCT_NAME}</string>
 	<key>CFBundleIconFile</key>
 	<string></string>
 	<key>CFBundleIdentifier</key>
-	<string>com.reverse.put.as.kext.onyx.the.black.cat</string>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>${PRODUCT_NAME}</string>
 	<key>CFBundlePackageType</key>
 	<string>KEXT</string>
 	<key>CFBundleSignature</key>
@@ -22,9 +22,9 @@
 	<string>3.0</string>
 	<key>OSBundleLibraries</key>
 	<dict>
-		<key>com.apple.kpi.libkern</key>
-		<string>9.0.0</string>
 		<key>com.apple.kpi.bsd</key>
+		<string>9.0.0</string>
+		<key>com.apple.kpi.libkern</key>
 		<string>9.0.0</string>
 	</dict>
 </dict>
