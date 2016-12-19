@@ -26,12 +26,7 @@ everything is disabled. This util requires root privileges to run. If you
 want to run it as normal user you can remove CTL_FLAG_PRIVILEGED from
 kernel_control.c source file.
 
-This code uses diStorm as its disassembler. 
-Due to licensing differences its files are not included. 
-You can download diStorm from:
-http://code.google.com/p/distorm/ and include the missing files.
-The only required change is to define SUPPORT_64BIT_OFFSET. You can do it
-either at diStorm's config.h file or at Xcode project settings.
+This code uses diStorm as its main disassembler. diStorm is now BSD licensed!
 
 Included are small test programs to test the anti-debug tricks, and other 
 features.

@@ -7,10 +7,10 @@
  *         \/     \/\/           \/
  *                    The Black Cat
  *
- * Copyright (c) fG!, 2011, 2012, 2013, 2014 - reverser@put.as - http://reverse.put.as
+ * Copyright (c) fG!, 2011, 2012, 2013, 2014, 2015, 2016 - reverser@put.as - https://reverse.put.as
  * All rights reserved.
  *
- * Based on original code by Landon J. Fuller <landonf@opendarwin.org>
+ * Some ideas based on original code by Landon J. Fuller <landonf@opendarwin.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

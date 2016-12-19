@@ -7,7 +7,7 @@
  *         \/     \/\/           \/ 
  *                    The Black Cat
  *
- * Copyright (c) fG!, 2011, 2012, 2013, 2014 - reverser@put.as - http://reverse.put.as
+ * Copyright (c) fG!, 2011, 2012, 2013, 2014, 2015, 2016 - reverser@put.as - https://reverse.put.as
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
